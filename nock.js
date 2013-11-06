@@ -1,8 +1,8 @@
-# -*- coding: utf-8 -*-
-"""nock -- working through http://www.urbit.org/2013/08/22/Chapter-2-nock.html
+#!/usr/bin/env node
 
-N.B. Implementation functions have a `_` prefix. Public functions do not. Don't worry to much about it. Just use the prefix-less versions when playing around, as they have all the debug niceties.
-"""
+//N.B. Implementation functions have a `_` prefix. Public functions do not
+
+/*
 import re
 import collections
 import contextlib
@@ -12,266 +12,126 @@ logger = logging.getLogger('nock')
 DEFAULT_LEVEL = logger.getEffectiveLevel()
 __all__ = ['YES', 'NO', 'fas', 'lus', 'nock', 'tar', 'tis', 'wut',
            'debug']
+*/
 
-"""
-1 Structures
+// TODO: Add in a whole bunch of comments from Urbit docs
 
-  A noun is an atom or a cell.  An atom is any natural number.
-  A cell is an ordered pair of nouns.
+// TODO: Starting with here, and the fact that YES is 0
+var YES = 0;
+var NO  = 1;
 
-2 Reductions
+/*
+The following functions make use of the official Urbit squiggle name conventions.  See here for details:
+http://www.urbit.org/2013/08/22/Chapter-4-syntax.html
+*/
 
-  1  :: nock(a)           *a
-  2  :: [a b c]           [a [b c]]
-  3
-  4  :: ?[a b]            0
-  5  :: ?a                1
-  6  :: +[a b]            +[a b]
-  7  :: +a                1 + a
-  8  :: =[a a]            0
-  9  :: =[a b]            1
-  10 :: =a                =a
-  11
-  12 :: /[1 a]            a
-  13 :: /[2 a b]          a
-  14 :: /[3 a b]          b
-  15 :: /[(a + a) b]      /[2 /[a b]]
-  16 :: /[(a + a + 1) b]  /[3 /[a b]]
-  17 :: /a                /a
-  18
-  19 :: *[a [b c] d]      [*[a b c] *[a d]]
-  20
-  21 :: *[a 0 b]          /[b a]
-  22 :: *[a 1 b]          b
-  23 :: *[a 2 b c]        *[*[a b] *[a c]]
-  24 :: *[a 3 b]          ?*[a b]
-  25 :: *[a 4 b]          +*[a b]
-  26 :: *[a 5 b]          =*[a b]
-  27
-  28 :: *[a 6 b c d]      *[a 2 [0 1] 2 [1 c d] [1 0] 2 [1 2 3] [1 0] 4 4 b]
-  29 :: *[a 7 b c]        *[a 2 b 1 c]
-  30 :: *[a 8 b c]        *[a 7 [[7 [0 1] b] 0 1] c]
-  31 :: *[a 9 b c]        *[a 7 c 2 [0 1] 0 b]
-  32 :: *[a 10 [b c] d]   *[a 8 c 7 [0 3] d]
-  33 :: *[a 10 b c]       *[a c]
-  34
-  35 :: *a                *a
+function _wut(noun) {
+    /*
+	? :: Test whether a noun is a cell or an atom.
+
+    4  ::    ?[a b]            0
+    5  ::    ?a                1
+
+    >>> ?([1, 2])
+    0
+    >>> ?(1)
+    1
+    */
+	if (Array.isArray(noun)) {
+		return YES;
+	}
+	else {
+		return NO;
+	}
+}
 
 
-1. Structures
-=============
-
-    A noun is an atom or a cell.  An atom is any natural number.
-    A cell is any ordered pair of nouns.
-
-Nouns are the dumbest data model ever. Nouns make JSON look like XML and XML look like ASN.1. It may also remind you of Lisp’s S-expressions - you can think of nouns as “S-expressions without the S.”
-
-To be exact, a noun is an S-expression, except that classic S-expressions have multiple atom types (”S” is for “symbol”). Since Nock is designed to be used with a higher-level type system (such as Hoon’s), it does not need low-level types. An atom is just an unsigned integer of any size.
-
-For instance, it’s common to represent strings (or even whole text files) as atoms, arranging them LSB first - so “foo” becomes 0x6f6f66. How do we know to print this as “foo”, not 0x6f6f66? We need external information - such as a Hoon type. Similarly, other common atomic types - signed integers, floating point, etc - are all straightforward to map into atoms.
-
-It’s also important to note that, unlike Lisp, Nock cannot create cyclical data structures. It is normal and common for nouns in a Nock runtime system to have acyclic structure - shared subtrees. But there is no Nock computatioen that can make a child point to its parent. One consequence: Nock has no garbage collector. (Nor can dag structure be detected, as with Lisp eq.)
-
-There is also no single syntax for nouns. If you have nouns you have Nock; if you have Nock you have Hoon; if you have Hoon, you can write whatever parser you like.
-
-Let’s continue:
-
-2. Pseudocode
-=============
-
-It’s important to recognize that the pseudocode of the Nock spec is just that: pseudocode. It looks a little like Hoon. It isn’t Hoon - it’s just pseudocode. Or in other words, just English. At the bottom of every formal system is a system of axioms, which can only be written in English. (Why pseudocode, not Hoon? Since Hoon is defined in Nock, this would only give a false impression of nonexistent precision.)
-
-The logic of this pseudocode is a pattern-matching reduction, matching from the top down. To compute Nock, repeatedly reduce with the first line that matches. Let’s jump right in!
-
-Line 1:
--------
-
-    1  ::    nock(a)           *a
-
-Nock is a pure (stateless) function from noun to noun. In our pseudocode (and only in our pseudocode) we express this with the prefix operator `*`.
-
-This function is defined for every noun, but on many nouns it does nothing useful. For instance, if `a` is an atom, `*a` reduces to… `*a`. In theory, this means that Nock spins forever in an infinite loop. In other words, Nock produces no result - and in practice, your interpreter will stop.
-
-(Another way to see this is that Nock has “crash-only” semantics. There is no exception mechanism. The only way to catch Nock errors is to simulate Nock in a higher-level virtual Nock - which, in fact, we do all the time. A simulator (or a practical low-level interpreter) can report, out of band, that Nock would not terminate. It cannot recognize all infinite loops, of course, but it can catch the obvious ones - like `*42`.)
-
-Normally `a` in `nock(a)` is a cell `[s f]`, or as we say
-
-    [subject formula]
-
-Intuitively, the formula is your function and the subject is its argument. We call them something different because Hoon, or any other high-level language built on Nock, will build its own function calling convention which does not map directly to *[subject formula].
-
-
-Line 2:
--------
-
-    2  ::    [a b c]           [a [b c]]
-
-"""
-
-
-def _aorc(a):
-    """Return an atom or a properly structured cell.
-
+function _aorc(a) {
+    /* Return an atom or a properly structured cell.  
     >>> _aorc(1)
     1
-    >>> _aorc((1, 2))
-    (1, 2)
-    """
-    if isinstance(a, collections.Iterable):
-        return _t(*a)
-    else:
-        return a
+    >>> _aorc([1,2])
+    [1, 2] 
+    */
+    
+    if (_wut(a) == YES) {
+        return _t(a);
+    }
+    else  {
+		return a;
+    }
+}
 
-
-def _t(*lst):
-    """Properly structure an improper list.
+function _t(list) {
+    /* Properly structure an improper list.
 
     2  ::    [a b c]           [a [b c]]
 
-    >>> _t(1)
-    (1, 0)
-    >>> _t(1, 2)
-    (1, 2)
-    >>> _t(1, 2, 3)
-    (1, (2, 3))
-    >>> _t(1, 2, 3, 4)
-    (1, (2, (3, 4)))
-    >>> _t(42, ((4, 0, 1), (3, 0, 1)))
-    (42, ((4, (0, 1)), (3, (0, 1))))
-    """
-    if len(lst) == 1:
-        return (_aorc(lst[0]), 0)
-    elif len(lst) == 2:
-        a, b = lst
-        return (_aorc(a), _aorc(b))
-    else:
-        return (_aorc(lst[0]), _t(*lst[1:]))
+    >>> _t([1])
+    [1, 0]
+    >>> _t([1, 2])
+    [1, 2]
+    >>> _t([1, 2, 3])
+    [1, [2, 3]]
+    >>> _t([1, 2, 3, 4])
+    [1, [2, [3, 4]]]
+    >>> _t([42, [[4, 0, 1], [3, 0, 1]]])
+    [42, [[4, [0, 1]], [3, [0, 1]]]]
+    */
 
+    if (list.length == 1) {
+        return [_aorc(list[0]), 0];
+    }
+    else if (list.length == 2) {
+        return [_aorc(list[0]), _aorc(list[1])];
+    }
+    else {
+        return [_aorc(list[0]), _t(list.slice(1))];
+    }
+}
 
-"""
-Ie, brackets (in our pseudocode, as in Hoon) associate to the right. For those with Lisp experience, it’s important to note that Nock and Hoon use tuples or “improper lists” much more heavily than Lisp. The list terminator, normally 0, is never automatic. So the Lisp list
-
-    (a b c)
-
-becomes the Nock noun
-
-    [a b c 0]
-
-which is equivalent to
-
-    [a [b [c 0]]]
-
-Note that we can and do use unnecessary brackets anyway, for emphasis.
-
-Let’s move on to the axiomatic functions.
-
-Lines 4-9:
-----------
-
-    4  ::    ?[a b]            0
-    5  ::    ?a                1
-    6  ::    +[a b]            +[a b]
-    7  ::    +a                1 + a
-    8  ::    =[a a]            0
-    9  ::    =[a b]            1
-
-Here we define more pseudocode operators, which we’ll use in reductions further down. So far we have four built-in functions: `*` meaning Nock itself, `?` testing whether a noun is a cell or an atom, `+` incrementing an atom, and `=` testing for equality. Again, no rocket science here.
-
-We should note that in Nock and Hoon, `0` (pronounced “yes”) is true, and `1` (“no”) is false. Why? It’s fresh, it’s different, it’s new. And it’s annoying. And it keeps you on your toes. And it’s also just intuitively right.
-"""
-YES = 0
-NO  = 1
-
-
-def _wut(noun):
-    """? :: Test whether a noun is a cell or an atom.
-
-    4  ::    ?[a b]            0
-    5  ::    ?a                1
-
-    >>> wut((1, 2))
-    0
-    >>> wut(1)
-    1
-    """
-    return NO if isinstance(noun, int) else YES
-
-
-def _lus(noun):
-    """+ :: Increment an atom.
+function _lus(noun) {
+    /*
+	+ :: Increment an atom.
 
     6  ::    +[a b]            +[a b]
     7  ::    +a                1 + a
 
-    >>> lus((1, 2))
-    (1, 2)
+    >>> lus([1, 2])
+    [1, 2]
     >>> lus(1)
     2
-    """
-    return (1 + noun) if isinstance(noun, int) else noun
+	*/
 
+	if (_wut(noun) == YES) {
+		return noun;
+	}
+	else {
+		return noun + 1;
+	}
+}
 
-def _tis(noun):
-    """= :: test for equality
+function _tis(noun) {
+	/*
+    = :: test for equality
 
     8  ::    =[a a]            0
     9  ::    =[a b]            1
 
-    >>> tis((1, 1))
+    >>> tis([1, 1])
     0
-    >>> tis((1, 0))
+    >>> tis([1, 0])
     1
-    """
-    return YES if noun[0] == noun[1] else NO
+    */
+	if (noun[0] == noun[1]) 
+		return YES;
+	else
+		return NO;
+}
 
-
-"""
-Lines 12-16:
-------------
-
-    12 ::    /[1 a]            a
-    13 ::    /[2 a b]          a
-    14 ::    /[3 a b]          b
-    15 ::    /[(a + a) b]      /[2 /[a b]]
-    16 ::    /[(a + a + 1) b]  /[3 /[a b]]
-
-Slightly more interesting is our tree numbering. Every noun is of course a tree. The / operator - pronounced “slot” - imposes an address space on that tree, mapping every nonzero atom to a tree position.
-
-1 is the root. The head of every node n is 2n; the tail is 2n+1. Thus a simple tree:
-
-         1
-      2      3
-    4   5  6   7
-             14 15
-
-If the value of every leaf is its tree address, this tree is
-
-    [[4 5] [6 14 15]]
-
-and, for some examples of addressing:
-
-    /[1 [[4 5] [6 14 15]]]
-
-is `[[4 5] [6 14 15]]]`
-
-    /[2 [[4 5] [6 14 15]]]
-
-is `[4 5]`
-
-    /[3 [[4 5] [6 14 15]]]
-
-is `[6 14 15]`, and
-
-    /[7 [[4 5] [6 14 15]]]
-
-is `[14 15]`
-
-I do hope this isn’t so terribly hard to follow.
-"""
-
-
-def _fas((n, noun)):
-    """Return the specified slot from the given noun.
+function _fas(list) {
+	/*
+    Return the specified slot from the given noun.
 
     12 ::    /[1 a]            a
     13 ::    /[2 a b]          a
@@ -279,33 +139,46 @@ def _fas((n, noun)):
     15 ::    /[(a + a) b]      /[2 /[a b]]
     16 ::    /[(a + a + 1) b]  /[3 /[a b]]
 
-    >>> tree = ((4, 5), (6, 14, 15))
-    >>> fas((1, tree))
-    ((4, 5), (6, (14, 15)))
+    >>> tree = [[4, 5], [6, 14, 15]]
+    >>> fas([1, tree])
+    [[4, 5], [6, [14, 15]]]
     >>> fas((2, tree))
-    (4, 5)
+    [4, 5]
     >>> fas((3, tree))
-    (6, (14, 15))
+    [6, [14, 15]]
     >>> fas((7, tree))
-    (14, 15)
-    """
-    noun = _aorc(noun)
-    try:
-        if n == 1:
-            return noun
-        elif n == 2:
-            return noun[0]
-        elif n == 3:
-            return noun[1]
-        elif n % 2 == 0:  # even
-            return _fas((2, _fas((n // 2, noun))))
-        elif n % 2 == 1:  # odd
-            return _fas((3, _fas(((n - 1) // 2, noun))))
-        else:
-            return noun
-    except TypeError:
-        return noun
+    [14, 15]
+    */
 
+	var n = list[0];
+	var noun;
+	if (list.length == 2) 
+		noun = _aorc(list[1]);
+	else 
+		noun = _aorc(list.slice(1));
+
+	// #12
+	if (n == 1)
+		return noun;
+	// #13
+	else if (n == 2)
+		return noun[0];
+	// #14
+	else if (n == 3)
+		return noun[1];
+	// #15, even slot index
+    else if (!(n % 2)) 
+		return _fas([2, _fas([n / 2, noun])]);
+	// #16, odd slot index
+    else 
+		return _fas([3, _fas([(n - 1) / 2, noun])]);
+}
+
+/*
+    >>> fas((3, tree))
+    [6, [14, 15]]
+    >>> fas((7, tree))
+    [14, 15]
 
 """
 Line 21:
@@ -890,3 +763,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+	*/
