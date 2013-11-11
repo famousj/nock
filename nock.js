@@ -174,279 +174,21 @@ function _fas(list) {
 		return _fas([3, _fas([(n - 1) / 2, noun])]);
 }
 
-/*
-    >>> fas((3, tree))
-    [6, [14, 15]]
-    >>> fas((7, tree))
-    [14, 15]
-
-"""
-Line 21:
---------
-
-Now we enter the definition of Nock itself - ie, the `*` operator.
-
-    21 ::    *[a 0 b]          /[b a]
-
-`0` is simply Nock’s tree-addressing operator. Let’s try it out from the Arvo command line.
-
-Note that we’re using Hoon syntax here. Since we do not use Nock from Hoon all that often (it’s sort of like embedding assembly in C), we’ve left it a little cumbersome. In Hoon, instead of writing `*[a 0 b]`, we write
-
-    .*(a [0 b])
-
-So, to reuse our slot example, let’s try the interpreter:
-
-    ~tasfyn-partyv> .*([[4 5] [6 14 15]] [0 7])
-
-gives, while the sky remains blue and the sun rises in the east:
-
-    [14 15]
-
-Even stupider is line 22:
-
-Line 22:
---------
-
-    22 ::    *[a 1 b]          b
-
-1 is the constant operator. It produces its argument without reference to the subject. So
-
-    ~tasfyn-partyv> .*(42 [1 153 218])
-
-yields
-
-    [153 218]
-
-Line 23:
---------
-
-    23 ::    *[a 2 b c]        *[*[a b] *[a c]]
-
-Line 23 brings us the essential magic of recursion. 2 is the Nock operator. If you can compute a subject and a formula, you can evaluate them in the interpreter. In most fundamental languages, like Lisp, eval is a curiosity. But Nock has no apply - so all our work gets done with 2.
-
-Let’s convert the previous example into a stupid use of 2:
-
-    ~tasfyn-partyv> .*(77 [2 [1 42] [1 1 153 218]])
-
-with a constant subject and a constant formula, gives the same
-
-    [153 218]
-
-Like so:
-
-    *[77 [2 [1 42] [1 1 153 218]]
-
-    23 ::    *[a 2 b c]        *[*[a b] *[a c]]
-
-    *[*[77 [1 42]] *[77 [1 1 153 218]]]
-
-    21 ::    *[a 1 b]          b
-
-    *[42 *[77 [1 1 153 218]]]
-
-    *[42 1 153 218]
-
-    [153 218]
-
-Lines 24-25:
-------------
-
-    24 ::    *[a 3 b]          ?*[a b]
-    25 ::    *[a 4 b]          +*[a b]
-    26 ::    *[a 5 b]          =*[a b]
-
-In lines 25-26, we meet our axiomatic functions again:
-
-For instance, if `x` is a formula that calculates some product, `[4 x]` calculates that product plus one. Hence:
-
-    ~tasfyn-partyv> .*(57 [0 1])
-    57
-
-and
-
-    ~tasfyn-partyv> .*([132 19] [0 3])
-    19
-
-and
-
-    ~tasfyn-partyv> .*(57 [4 0 1])
-    58
-
-and
-
-    ~tasfyn-partyv> .*([132 19] [4 0 3])
-    20
-
-
-Line 19:
---------
-
-    19 ::    *[a [b c] d]      [*[a b c] *[a d]]
-
-Um, what?
-
-Since Nock of an atom just crashes, the practical domain of the Nock function is always a cell. Conventionally, the head of this cell is the “subject,” the tail is the “formula,” and the result of Nocking it is the “product.” Basically, the subject is your data and the formula is your code.
-
-We could write line 19 less formally:
-
-    *[subject [formula-x formula-y]]
-    =>  [*[subject formula-x] *[subject formula-y]]
-
-In other words, if you have two Nock formulas `x` and `y`, a formula that computes the pair of them is just `[x y]`. We can recognize this because no atom is a valid formula, and every formula that does not use line 19 has an atomic head.
-
-If you know Lisp, you can think of this feature as a sort of “implicit cons.” Where in Lisp you would write `(cons x y)`, in Nock you write `[x y]`.
-
-For example,
-
-    ~tasfyn-partyv> .*(42 [4 0 1])
-
-where `42` is the subject (data) and `[4 0 1]` is the formula (code), happens to evaluate to `43`. Whereas
-
-    ~tasfyn-partyv> .*(42 [3 0 1])
-
-is `1`. So if we evaluate
-
-    ~tasfyn-partyv> .*(42 [[4 0 1] [3 0 1]])
-
-we get
-
-    [43 1]
-
-Except for the crash defaults (lines 6, 10, 17, and 35), we’ve actually completed all the essential aspects of Nock. The operators up through 5 provide all necessary computational functionality. Nock, though very simple, is actually much more complex than it formally needs to be.
-
-Operators 6 through 10 are macros. They exist because Nock is not a toy, but a practical interpreter. Let’s see them all together:
-
-Lines 28-33:
-------------
-
-    28 ::    *[a 6 b c d]      *[a 2 [0 1] 2 [1 c d] [1 0] 2 [1 2 3] [1 0] 4 4 b]
-    29 ::    *[a 7 b c]        *[a 2 b 1 c]
-    30 ::    *[a 8 b c]        *[a 7 [[7 [0 1] b] 0 1] c]
-    31 ::    *[a 9 b c]        *[a 7 c 2 [0 1] 0 b]
-    32 ::    *[a 10 [b c] d]   *[a 8 c 7 [0 3] d]
-    33 ::    *[a 10 b c]       *[a c]
-
-Whoa! Have we entered rocket-science territory? Let’s try to figure out what these strange formulas do - simplest first. The simplest is clearly line 33:
-
-    33 ::    *[a 10 b c]       *[a c]
-
-If `x` is an atom and `y` is a formula, the formula `[10 x y]` appears to be equivalent to… `y`. For instance:
-
-    ~tasfyn-partyv> .*([132 19] [10 37 [4 0 3]])
-    20
-
-Why would we want to do this? `10` is actually a hint operator. The `37` in this example is discarded information - it is not used, formally, in the computation. It may help the interpreter compute the expression more efficiently, however.
-
-Every Nock computes the same result - but not all at the same speed. What hints are supported? What do they do? Hints are a higher-level convention which do not, and should not, appear in the Nock spec. Some are defined in Hoon. Indeed, a naive Nock interpreter not optimized for Hoon will run Hoon quite poorly. When it gets the product, however, the product will be right.
-
-There is another reduction for hints - line 32:
-
-    32 ::    *[a 10 [b c] d]   *[a 8 c 7 [0 3] d]
-
-Once we see what `7` and 8 do, we’ll see that this complex hint throws away an arbitrary `b`, but computes the formula `c` against the subject and… throws away the product. This formula is simply equivalent to `d`. Of course, in practice the product of `c` will be put to some sordid and useful use. It could even wind up as a side effect, though we try not to get that sordid.
-
-(Why do we even care that `c` is computed? Because `c` could crash. A correct Nock cannot simply ignore it, and treat both variants of `10` as equivalent.)
-
-We move on to the next simplest operator, 7. Line 29:
-
-    29 ::    *[a 7 b c]        *[a 2 b 1 c]
-
-Suppose we have two formulas, `b` and `c`. What is the formula `[7 b c]`? This example will show you:
-
-    ~tasfyn-partyv> .*(42 [7 [4 0 1] [4 0 1]])
-    44
-
-`7` is an old mathematical friend, function composition. It’s easy to see how this is built out of `2`. The data to evaluate is simply `b`, and the formula is `c` quoted.
-
-Line 30 looks very similar:
-
-    30 ::    *[a 8 b c]        *[a 7 [[7 [0 1] b] 0 1] c]
-
-Indeed, `8` is `7`, except that the subject for `c` is not simply the product of `b`, but the ordered pair of the product of `b` and the original subject. Hence:
-
-    ~tasfyn-partyv> .*(42 [8 [4 0 1] [0 1]])
-    [43 42]
-
-and
-
-    ~tasfyn-partyv> .*(42 [8 [4 0 1] [4 0 3]])
-    43
-
-Why would we want to do this? Imagine a higher-level language in which the programmer declares a variable. This language is likely to generate an `8`, because the variable is computed against the present subject, and used in a calculation which depends both on the original subject and the new variable.
-
-For extra credit, explain why we can’t just define
-
-    *[a 8 b c]        *[a 7 [b 0 1] c]
-
-Another simple macro is line 31:
-
-    31 ::    *[a 9 b c]        *[a 7 c 2 [0 1] 0 b]
-
-`9` is a calling convention. With `c`, we produce a noun which contains both code and data - a core. We use this core as the subject, and apply the formula within it at slot `b`.
-
-And finally, we come to the piece de resistance - line 28:
-
-    28 ::    *[a 6 b c d]      *[a 2 [0 1] 2 [1 c d] [1 0] 2 [1 2 3] [1 0] 4 4 b]
-
-Great giblets! WTF is this doing? It seems we’ve finally arrived at some real rocket science.
-
-Actually, `6` is a primitive known to every programmer - good old “if.” If `b` evaluates to `0`, we produce `c`; if `b` evaluates to `1`, we produce `d`; otherwise, we crash.
-
-For instance:
-
-    ~tasfyn-partyv> .*(42 [6 [1 0] [4 0 1] [1 233]])
-    43
-
-and
-
-    ~tasfyn-partyv> .*(42 [6 [1 1] [4 0 1] [1 233]])
-    233
-
-In real life, of course, the Nock implementor knows that `6` is “if” and implements it as such. There is no practical sense in reducing through this macro, or any of the others. We could have defined “if” as a built-in function, like increment - except that we can write “if” as a macro. If a funky macro.
-
-It’s a good exercise, however, to peek inside the funk.
-
-We can actually simplify the semantics of `6`, at the expense of breaking the system a little, by creating a macro that works as “if” only if `b` is a proper boolean and produces `0` or `1`. Perhaps we have a higher-level type system which checks this.
-
-This simpler “if” would be:
-
-    *[a 6 b c d]    *[a [2 [0 1] [2 [1 c d] [[1 0] [4 4 b]]]]]
-
-Or without so many unnecessary brackets:
-
-    *[a 6 b c d]    *[a 2 [0 1] 2 [1 c d] [1 0] [4 4 b]]
-
-How does this work? We’ve replaced `[6 b c d]` with the formula `[2 [0 1] [2 [1 c d] [[1 0] [4 4 b]]]]`. We see two uses of `2`, our evaluation operator - an outer and an inner.
-
-Call the inner one `i`. So we have `[2 [0 1] i]`. Which means that, to calculate our product, we use `[0 1]` - that is, the original subject - as the subject; and the product of `i` as the formula.
-
-Okay, cool. So `i` is `[2 [1 c d] [[1 0] [4 4 b]]]`. We compute Nock with subject `[1 c d]`, formula `[[1 0] [4 4 b]]`.
-
-Obviously, `[1 c d]` produces just `[c d]` - that is, the ordered pair of the “then” and “else” formulas. `[[1 0] [4 4 b]]` is a line 19 cell - its head is `[1 0]`, producing just `0`, its tail `[4 4 b]`, producing… what? Well, if `[4 b]` is `b` plus `1`, `[4 4 b]` is `b` plus `2`.
-
-We’re assuming that `b` produces either `0` or `1`. So `[4 4 b]` yields either `2` or `3`. `[[1 0] [4 4 b]]` is either `[0 2]` or `[0 3]`. Applied to the subject `[c d]`, this gives us either `c` or `d` - the product of our inner evaluation `i`. This is applied to the original subject, and the result is “if.”
-
-But we need the full power of the funk, because if `b` produces, say, `7`, all kinds of weirdness will result. We’d really like `6` to just crash if the test product is not a boolean. How can we accomplish this? This is an excellent way to prove to yourself that you understand Nock: figure out what the real `6` does. Or you could just agree that `6` is “if,” and move on.
-
-(It’s worth noting that in practical, compiler-generated Nock, we never do anything as funky as these `6` macro internals. There’s no reason we couldn’t build formulas at runtime, but we have no reason to and we don’t - except when actually metaprogramming. As in most languages, normally code is code and data is data.)
-
-
-"""
-OP_FAS = 0
-OP_CON = 1
-OP_TAR = 2
-OP_WUT = 3
-OP_LUS = 4
-OP_TIS = 5
-OP_IF  = 6
-OP_H07 = 7
-OP_H08 = 8
-OP_H09 = 9
-OP_H10 = 10
-
-
-def _tar(noun):
-    """*[a, b] -- Reduce a Nock expression.
+OP_FAS = 0;
+OP_CON = 1;
+OP_TAR = 2;
+OP_WUT = 3;
+OP_LUS = 4;
+OP_TIS = 5;
+OP_IF  = 6;
+OP_H07 = 7;
+OP_H08 = 8;
+OP_H09 = 9;
+OP_H10 = 10;
+
+function _tar(noun) {
+    /*
+	*[a, b] -- Reduce a Nock expression.
 
     ## 19 ::    *[a [b c] d]      [*[a b c] *[a d]]
     >>> tar((42, ((4, 0, 1), (3, 0, 1))))
@@ -505,47 +247,56 @@ def _tar(noun):
     ## 33 ::    *[a 10 b c]       *[a c]
     >>> tar(((132, 19), (10, 37, (4, 0, 3))))
     20
-    """
-    noun = _t(*noun)
-    # Let's use `_fas` to carve up the noun, for practice.
-    subj = _fas((2, noun))  # noun[0]
-    op = _fas((6, noun))  # noun[1][0]
-    obj = _fas((7, noun))  # noun[1][1]
-    with _indent():
-        if _wut(op) == YES:
-            _d("<- 19 ::    *[a [b c] d]      [*[a b c] *[a d]]")
-            with _indent():
-                return (tar((subj, op)), tar((subj, obj)))
-        else:
-            if op == OP_FAS:
-                _d("<- 21 ::    *[a 0 b]          /[b a]")
-                return fas((obj, subj))
+    */
 
-            elif op == OP_CON:
-                _d("<- 22 ::    *[a 1 b]          b")
-                return obj
+    noun = _t(noun);
 
-            elif op == OP_TAR:
-                _d("<- 23 ::    *[a 2 b c]        *[*[a b] *[a c]]")
-                b = _fas((2, obj))
-                c = _fas((3, obj))
-                with _indent():
-                    return tar((tar((subj, b)), tar((subj, c))))
-
-            elif op == OP_WUT:
-                _d("<- 24 ::    *[a 3 b]          ?*[a b]")
-                return wut(tar((subj, obj)))
-
-            elif op == OP_LUS:
-                _d("<- 25 ::    *[a 4 b]          +*[a b]")
-                return lus(tar((subj, obj)))
-
-            elif op == OP_TIS:
-                _d("<- 26 ::    *[a 5 b]          =*[a b]")
-                return tis(tar((subj, obj)))
-
-            elif op == OP_IF:
-                _d("<- 28 ::    *[a 6 b c d]      *[a 2 [0 1] 2 [1 c d] [1 0] 2 [1 2 3] [1 0] 4 4 b]")
+    subj = _fas([2, noun]);	// noun[0]
+    op = _fas([6, noun]); 	// noun[1][0]
+    obj = _fas([7, noun]);  // noun[1][1]
+	
+	// TODO: Figure out what Mr. Eyk was up to with the indent thing
+	
+	// #19
+	if (_wut(op) == YES) {
+		console.log("<- 19 ::    *[a [b c] d]      [*[a b c] *[a d]]");
+		return (_tar([subj, op]), _tar([subj obj]));
+	}
+	// #21: tree addressing
+	else if (op == OP_FAS) {
+		console.log("<- 21 ::    *[a 0 b]          /[b a]");
+		return fas([obj, subj]);
+	}
+	// #22: constant operator
+	else if (op == OP_CON) {
+		console.log("<- 22 ::    *[a 1 b]          b");
+		return obj
+	}
+	// #23: recursion
+	else if (op == OP_TAR) { 
+		console.log("<- 23 ::    *[a 2 b c]        *[*[a b] *[a c]]");
+		b = _fas([2, obj]);
+		c = _fas([3, obj]);
+		return tar([tar([subj, b]), tar([subj, c]));
+	}
+	// #24: ?
+	else if (op == OP_WUT) { 
+		console.log("<- 24 ::    *[a 3 b]          ?*[a b]");
+		return wut(tar([subj, obj]));
+	}
+	// #25: +
+	else if (op == OP_LUS) { 
+		console.log("<- 25 ::    *[a 4 b]          +*[a b]");
+		return lus(tar([subj, obj]));
+	}
+	// #26: =
+	else if (op == OP_TIS) { 
+		console.log("<- 26 ::    *[a 5 b]          =*[a b]");
+		return tis(tar([subj, obj]));
+	}
+	// #28: if
+	else if (op == OP_IF) { 
+		console.log("<- 28 ::    *[a 6 b c d]      *[a 2 [0 1] 2 [1 c d] [1 0] 2 [1 2 3] [1 0] 4 4 b]");
                 a = subj
                 b = _fas((2, obj))
                 c = _fas((6, obj))
@@ -586,8 +337,9 @@ def _tar(noun):
                     c = _fas((3, obj))
                     with _indent():
                         return tar((subj, c))
+}
 
-
+/*
 ### HELPERS, because WE NEED HELP.
 ##################################
 def _r(noun):
