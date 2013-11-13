@@ -1,18 +1,14 @@
 #!/usr/bin/env node
 
 //N.B. Implementation functions have a `_` prefix. Public functions do not
+NOCK_VERSION = "5K";
+NOCKJS_VERSION = "0.1";
 
-/*
-import re
-import collections
-import contextlib
-import logging
+DEBUG = 2;
 
-logger = logging.getLogger('nock')
-DEFAULT_LEVEL = logger.getEffectiveLevel()
-__all__ = ['YES', 'NO', 'fas', 'lus', 'nock', 'tar', 'tis', 'wut',
-           'debug']
-*/
+function showDebug(msg) {
+	if (DEBUG) console.log(msg);
+}
 
 // TODO: Add in a whole bunch of comments from Urbit docs
 
@@ -25,7 +21,7 @@ The following functions make use of the official Urbit squiggle name conventions
 http://www.urbit.org/2013/08/22/Chapter-4-syntax.html
 */
 
-function _wut(noun) {
+function wut(noun) {
     /*
 	? :: Test whether a noun is a cell or an atom.
 
@@ -38,59 +34,63 @@ function _wut(noun) {
     1
     */
 	if (Array.isArray(noun)) {
+		showDebug("4  ::    ?[a b]            0");
 		return YES;
 	}
 	else {
+		showDebug("5  ::    ?a                1");
 		return NO;
 	}
 }
 
 
-function _aorc(a) {
+function aorc(a) {
     /* Return an atom or a properly structured cell.  
-    >>> _aorc(1)
+    >>> aorc(1)
     1
-    >>> _aorc([1,2])
+    >>> aorc([1,2])
     [1, 2] 
     */
     
-    if (_wut(a) == YES) {
-        return _t(a);
+    if (Array.isArray(a)) {
+        return properize(a);
     }
     else  {
 		return a;
     }
 }
 
-function _t(list) {
+function properize(list) {
     /* Properly structure an improper list.
 
     2  ::    [a b c]           [a [b c]]
 
-    >>> _t([1])
-    [1, 0]
-    >>> _t([1, 2])
+    >>> properize([1])
+	ERROR
+    >>> properize([1, 2])
     [1, 2]
-    >>> _t([1, 2, 3])
+    >>> properize([1, 2, 3])
     [1, [2, 3]]
-    >>> _t([1, 2, 3, 4])
+    >>> properize([1, 2, 3, 4])
     [1, [2, [3, 4]]]
-    >>> _t([42, [[4, 0, 1], [3, 0, 1]]])
+    >>> properize([42, [[4, 0, 1], [3, 0, 1]]])
     [42, [[4, [0, 1]], [3, [0, 1]]]]
     */
 
     if (list.length == 1) {
-        return [_aorc(list[0]), 0];
+        var newlist = [aorc(list[0]), 0];
+		showDebug(newlist);
+		return newlist;
     }
     else if (list.length == 2) {
-        return [_aorc(list[0]), _aorc(list[1])];
+        return [aorc(list[0]), aorc(list[1])];
     }
     else {
-        return [_aorc(list[0]), _t(list.slice(1))];
+        return [aorc(list[0]), properize(list.slice(1))];
     }
 }
 
-function _lus(noun) {
+function lus(noun) {
     /*
 	+ :: Increment an atom.
 
@@ -98,20 +98,21 @@ function _lus(noun) {
     7  ::    +a                1 + a
 
     >>> lus([1, 2])
-    [1, 2]
+    "lus([1, 2])"
     >>> lus(1)
     2
 	*/
 
-	if (_wut(noun) == YES) {
-		return noun;
+	if (Array.isArray(noun)) {
+    	showDebug("6  ::    +[a b]            +[a b]");
+		return "+" + formatResult(noun);
 	}
 	else {
 		return noun + 1;
 	}
 }
 
-function _tis(noun) {
+function tis(noun) {
 	/*
     = :: test for equality
 
@@ -123,13 +124,17 @@ function _tis(noun) {
     >>> tis([1, 0])
     1
     */
-	if (noun[0] == noun[1]) 
+	if (noun[0] == noun[1])  {
+    	showDebug("8  ::    =[a a]            0");
 		return YES;
-	else
+	}
+	else {
+    	showDebug("9  ::    =[a b]            1");
 		return NO;
+	}
 }
 
-function _fas(list) {
+function fas(list) {
 	/*
     Return the specified slot from the given noun.
 
@@ -153,25 +158,34 @@ function _fas(list) {
 	var n = list[0];
 	var noun;
 	if (list.length == 2) 
-		noun = _aorc(list[1]);
+		noun = aorc(list[1]);
 	else 
-		noun = _aorc(list.slice(1));
+		noun = aorc(list.slice(1));
 
-	// #12
-	if (n == 1)
+	if (n == 1) {
+		showDebug("12 ::    /[1 a]            a");
 		return noun;
-	// #13
-	else if (n == 2)
+	}
+	else if (n == 2) {
+		showDebug("13 ::    /[2 a b]          a");
 		return noun[0];
-	// #14
-	else if (n == 3)
+	}
+	else if (n == 3) {
+		showDebug("14 ::    /[3 a b]          b");
 		return noun[1];
+	}
 	// #15, even slot index
-    else if (!(n % 2)) 
-		return _fas([2, _fas([n / 2, noun])]);
+    else if (!(n % 2)) {
+		showDebug("15 ::    /[(a + a) b]      /[2 /[a b]]");
+		showDebug(noun);
+		showDebug(formatResult(noun));
+		return "/[2 /[" + n / 2 + " " + formatResult(noun) + "]]";
+	}
 	// #16, odd slot index
-    else 
-		return _fas([3, _fas([(n - 1) / 2, noun])]);
+    else {
+		showDebug("16 ::    /[(a + a + 1) b]  /[3 /[a b]]");
+		return fas([3, fas([(n - 1) / 2, noun])]);
+	}
 }
 
 OP_FAS = 0;
@@ -186,7 +200,7 @@ OP_H08 = 8;
 OP_H09 = 9;
 OP_H10 = 10;
 
-function _tar(noun) {
+function tar(noun) {
     /*
 	*[a, b] -- Reduce a Nock expression.
 
@@ -249,18 +263,18 @@ function _tar(noun) {
     20
     */
 
-    noun = _t(noun);
+    noun = properize(noun);
 
-    subj = _fas([2, noun]);	// noun[0]
-    op = _fas([6, noun]); 	// noun[1][0]
-    obj = _fas([7, noun]);  // noun[1][1]
+    subj = fas([2, noun]);	// noun[0]
+    op = fas([6, noun]); 	// noun[1][0]
+    obj = fas([7, noun]);  // noun[1][1]
 	
 	// TODO: Figure out what Mr. Eyk was up to with the indent thing
 	
 	// #19
-	if (_wut(op) == YES) {
+	if (wut(op) == YES) {
 		console.log("<- 19 ::    *[a [b c] d]      [*[a b c] *[a d]]");
-		return (_tar([subj, op]), _tar([subj obj]));
+		return (tar([subj, op]), tar([subj, obj]));
 	}
 	// #21: tree addressing
 	else if (op == OP_FAS) {
@@ -275,9 +289,9 @@ function _tar(noun) {
 	// #23: recursion
 	else if (op == OP_TAR) { 
 		console.log("<- 23 ::    *[a 2 b c]        *[*[a b] *[a c]]");
-		b = _fas([2, obj]);
-		c = _fas([3, obj]);
-		return tar([tar([subj, b]), tar([subj, c]));
+		b = fas([2, obj]);
+		c = fas([3, obj]);
+		return tar([tar([subj, b]), tar([subj, c])]);
 	}
 	// #24: ?
 	else if (op == OP_WUT) { 
@@ -297,223 +311,168 @@ function _tar(noun) {
 	// #28: if
 	else if (op == OP_IF) { 
 		console.log("<- 28 ::    *[a 6 b c d]      *[a 2 [0 1] 2 [1 c d] [1 0] 2 [1 2 3] [1 0] 4 4 b]");
-                a = subj
-                b = _fas((2, obj))
-                c = _fas((6, obj))
-                d = _fas((7, obj))
-                with _indent():
-                    return tar((a, 2, (0, 1), 2, (1, c, d), (1, 0), 2, (1, 2, 3), (1, 0), 4, 4, b))
-
-            elif op == OP_H07:
-                _d("<- 29 ::    *[a 7 b c]        *[a 2 b 1 c]")
-                b = _fas((2, obj))
-                c = _fas((3, obj))
-                with _indent():
-                    return tar((subj, 2, b, 1, c))
-
-            elif op == OP_H08:
-                _d("<- 30 ::    *[a 8 b c]        *[a 7 [[7 [0 1] b] 0 1] c]")
-                b = _fas((2, obj))
-                c = _fas((3, obj))
-                with _indent():
-                    return tar((subj, 7, ((7, (0, 1), b), 0, 1), c))
-
-            elif op == OP_H09:
-                _d("<- 31 ::    *[a 9 b c]        *[a 7 c 2 [0 1] 0 b]")
-                b = _fas((2, obj))
-                c = _fas((3, obj))
-                with _indent():
-                    return tar((subj, 7, c, 2, (0, 1), 0, b))
-
-            elif op == OP_H10:
-                hint = _fas((2, obj))
-                if _wut(hint) == YES:
-                    _d("<- 32 ::    *[a 10 [b c] d]   *[a 8 c 7 [0 3] d]")
-                    c = _fas((2, hint))
-                    with _indent():
-                        return tar((subj, 8, c, 7, (0, 3), obj))
-                else:
-                    _d("<- 33 ::    *[a 10 b c]       *[a c]")
-                    c = _fas((3, obj))
-                    with _indent():
-                        return tar((subj, c))
+		a = subj
+		b = fas([2, obj]);
+		c = fas([6, obj]);
+		d = fas([7, obj]);
+		return tar([a, 2, [0, 1], 2, [1, c, d], [1, 0], 2, [1, 2, 3], [1, 0], 4, 4, b]); 
+	}
+	else if (op == OP_H07) {
+		console.log("<- 29 ::    *[a 7 b c]        *[a 2 b 1 c]");
+		b = fas([2, obj]);
+		c = fas([3, obj]);
+		return tar([subj, 2, b, 1, c]); 
+	}
+	else if (op == OP_H08) {
+		console.log("<- 30 ::    *[a 8 b c]        *[a 7 [[7 [0 1] b] 0 1] c]");
+		b = fas([2, obj]);
+		c = fas([3, obj]); 
+		return tar([subj, 7, [[7, [0, 1], b], 0, 1], c]); 
+	}
+	else if (op == OP_H09) {
+		console.log("<- 31 ::    *[a 9 b c]        *[a 7 c 2 [0 1] 0 b]");
+		b = fas([2, obj]);
+		c = fas([3, obj]);
+		return tar([subj, 7, c, 2, [0, 1], 0, b]); 
+	}
+	else if (op == OP_H10) {
+		hint = fas([2, obj]);
+		if (wut(hint) == YES) {
+			console.log("<- 32 ::    *[a 10 [b c] d]   *[a 8 c 7 [0 3] d]");
+			c = fas([2, hint]);
+			return tar([subj, 8, c, 7, [0, 3], obj]);
+		}
+		else {
+			console.log("<- 33 ::    *[a 10 b c]       *[a c]");
+			c = fas([3, obj]);
+			return tar([subj, c]);
+		}
+	}
 }
 
-/*
-### HELPERS, because WE NEED HELP.
-##################################
-def _r(noun):
-    """Return a Nock-like repr() of the given noun.
+function parseNock(str) {
+	/*
+	 * Take a nock string and generate the equivalent JavaScript command
+	 */
+	if (DEBUG > 1) console.log("Parsing: '" + str + "'");
+	if (str == "") {
+		return "";
+	}
 
-    >>> _r((42, 0, 1))
-    '[42 0 1]'
-    """
-    if isinstance(noun, int):
-        return repr(noun)
-    else:
-        return '[%s]' % ' '.join(_r(i) for i in noun)
+	if (str[0] == '?') {
+		return "wut(" + parseNock(str.slice(1)) + ")";
+	}
+	else if (str[0] == "/") {
+		return "fas(" + parseNock(str.slice(1)) + ")";
+	}
+	else if (str[0] == "+") {
+		return "lus(" + parseNock(str.slice(1)) + ")";
+	}
+	else if (str[0] == "*") {
+		return "tar(" + parseNock(str.slice(1)) + ")";
+	}
+	else if (str[0] == "=") {
+		return "tis(" + parseNock(str.slice(1)) + ")";
+	}
 
+	// Remove matching sel and ser
+	if ((matches = str.match(/^(.*)\[([^\[\]]+)\](.*)$/)) != null) {
+		return parseNock(matches[1]) + 
+			   "[" + parseNock(matches[2]) + "]" +
+			   parseNock(matches[3]);
+	}
 
-DEBUG_LEVEL = 0
+	// if the next character is 
 
+	// digits followed by possible whitespace, and end of line 
+	if ((matches = str.match(/^(\d+\s*)$/)) != null) 
+		return matches[1];
 
-@contextlib.contextmanager
-def _indent():
-    """Context manager to raise and lower the debug output indentation level.
-    """
-    global DEBUG_LEVEL
-    DEBUG_LEVEL += 1
-    try:
-        yield
-    finally:
-        DEBUG_LEVEL -= 1
+	// digits with a space and then something else get a comma :0
+	if ((matches = str.match(/^(\d+)\s+(.+)/)) != null) 
+		return matches[1] + ", " + parseNock(matches[2]);
 
-
-def _d(*args):
-    """Log, at the given indentation level, the given logging arguments.
-    """
-    level = DEBUG_LEVEL * ' '
-    a = level + args[0]
-    return logger.debug(a, *args[1:])
-
-
-def _public(original_func, formatter):
-    """Create a public interface w/ debug warts.
-    """
-    def wrapper(noun):
-        _d(formatter, _r(noun))
-        result = original_func(noun)
-        with _indent():
-            _d(_r(result))
-        return result
-    wrapper.__name__ = original_func.__name__.replace('_', '')
-    wrapper.__doc__ = original_func.__doc__
-    return wrapper
-
-### Public interface for Nock implementation functions.
-#######################################################
-wut = _public(_wut, '?%s')
-lus = _public(_lus, '+%s')
-tis = _public(_tis, '=%s')
-fas = _public(_fas, '/%s')
-tar = _public(_tar, '*%s')
-
-
-def nock(n):
-    """Reduce a Nock expression.
-
-    >>> nock((2, 0, 1))
-    2
-    >>> nock('[2 0 1]')
-    2
-    >>> nock('*[2 0 1]')
-    2
-    """
-    expr = n
-    if isinstance(n, basestring):
-        expr = parse(n)
-        if n.startswith('*'):
-            return expr
-
-    return tar(expr)
-
-
-def debug(on=True):
-    """Switch debug mode on.
-
-    This logs each step of a Nock reduction, with indentation, so that you can
-    kinda sorta tell what the heck is going on.
-    """
-    root = logging.getLogger()
-    if on:
-        if not root.handlers:
-            logging.basicConfig(level=logging.DEBUG)
-        logger.setLevel(logging.DEBUG)
-    else:
-        logger.setLevel(DEFAULT_LEVEL)
-
-
-### The PARSER
-##################
-TOKENS_CP = re.compile(r'\[|\]|[0-9]+|[*?=/+]')
-NUMBERS = set('0123456789')
-OPS = {
-    '/': fas,
-    '+': lus,
-    '*': tar,
-    '=': tis,
-    '?': wut,
+	// If we're still here, we got something weird
+	throw Error("Unexpected input: " + str);
 }
 
 
-def _construct(tk_iter, token):
-    """Construct and reduce Nock sub-expressions.
-    """
-    if token == '[':
-        out = []
-        token = tk_iter.next()
-        while token != ']':
-            out.append(_construct(tk_iter, token))
-            token = tk_iter.next()
+function formatResult(result) {
+	/*
+	 * Take the javascript return value and format it to look nocky
+	 */
 
-        return tuple(out)
-    if token in OPS:
-        return OPS[token](_construct(tk_iter, tk_iter.next()))
-    elif token[0] in NUMBERS:
-        return int(token)
+	// The return value should be either an atom or an array.
+	// The array could be an array of arrays.  
 
-    raise SyntaxError("Malformed Nock expression.")
+	if (DEBUG > 1) console.log("formatting " + result);
+
+	if (!Array.isArray(result))
+		return result + "";
+
+	var returnVal = "["
+	for (var i = 0; i < result.length; i++) {
+		if (i != 0) {
+			returnVal += " ";
+		}
+
+		if (Array.isArray(result[i]))
+			returnVal += formatResult(result[i]);
+		else 
+			returnVal += result[i]
+	}		
+	returnVal += "]";
+
+	return returnVal;
+}
+
+function nock(command) {
+	while (typeof command == "string") {
+		if (DEBUG > 1) console.log(command);
+
+		// TODO: Yes, I'm using the dreaded eval statement.  This is version
+		// 0.1 and this is  the least amount of code to write.   Since the 
+		// parser immediately blows up on anything not an operator, digit, 
+		// [ or ], I don't // _think_ this would be an issue.  But I'm not 
+		// sure.  Hence TODO here is to think up a cuter way of doing things.
+		var jsCommand = parseNock(command);
 
 
-def parse(s):
-    """Nock parser.
+		var result = eval(jsCommand);
 
-    Based on effbot's `iterator-based parser`_.
+		// Don't loop infinitely.  
+		// TODO: think of some other kind of infinite loop detection
+		if (formatResult(result) == command) {
+			console.log(result);
+			showDebug("Exiting now to avoid an infinite loop");
+			return;
+		}
+		
+		command = result;
 
-    .. _iterator-based parser: http://effbot.org/zone/simple-iterator-parser.htm
-    """
-    tokens = iter(TOKENS_CP.findall(s))
-    return _construct(tokens, tokens.next())
+		if (typeof(command) == "string")
+			showDebug(command);
+		else 
+			console.log(formatResult(result));
+	}
+}
 
+'use strict';
 
-def main():
-    import sys
-    import readline
-    readline.parse_and_bind('tab: complete')
-    logging.basicConfig(level=logging.DEBUG, format='%(message)s')
+console.log("Nock ver. " + NOCK_VERSION);
+console.log("Nock.js ver. " + NOCKJS_VERSION);
+console.log("Control-C to exit");
 
-    print "Welcome to Nock! (`:q` or ^D to quit; `:debug on` to enter debug mode)"
-    print "    (If you're totally confused, read http://www.urbit.org/2013/08/22/Chapter-2-nock.html)"
-    print
-    try:
-        DEBUG = False
-        while True:
-            line = raw_input('-> ').strip()
-            if not line:
-                continue
-            elif line == ':q':
-                break
+process.stdout.write("> ");
+	
+process.stdin.resume();
 
-            elif line.startswith(':debug'):
-                if line.endswith('off'):
-                    DEBUG = False
-                elif line.endswith('on'):
-                    DEBUG = True
-                else:
-                    DEBUG = not DEBUG
+process.stdin.on('data', function(line) {
+	line = line + "";
+	line = line.replace(/^\s\s*/, '').replace(/\s\s*$/, '');
 
-                debug()
-            else:
-                print _r(parse(line))
-                print
-    except EOFError:
-        pass
+	nock(line);
+	
+	process.stdout.write("> ");
+});
 
-    print "Good-bye!"
-    print
-    sys.exit()
-
-if __name__ == "__main__":
-    main()
-
-	*/
