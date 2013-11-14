@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 /*
  * For details as to what's going on here, check out Chapter 2 of the Urbit
  * documentation:
@@ -465,29 +463,11 @@ function formatList(result) {
 	return returnVal;
 }
 
-function nock(command) {
-	var jsFunction = parseNock(command);
-
-	var result = jsFunction();
-	console.log(formatList(result));
+// Exports for node.js
+exports.parseNock = function(command) {
+	return parseNock(command);
 }
 
-'use strict';
-
-console.log("Nock ver. " + NOCK_VERSION + "; Nock.js ver. " + NOCKJS_VERSION);
-console.log("Control-C to exit");
-
-process.stdout.write("> ");
-	
-process.stdin.resume();
-
-process.stdin.on('data', function(line) {
-	line = line + "";
-	line = line.replace(/^\s\s*/, '').replace(/\s\s*$/, '');
-
-	if (line != "") 
-		nock(line);
-	
-	process.stdout.write("> ");
-});
-
+exports.formatList = function(list) {
+	return formatList(list);
+}
