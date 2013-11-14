@@ -238,12 +238,12 @@ function tar(noun) {
 	}
 	// #26: =
 	else if (op == OP_TIS) { 
-		console.log("<- 26 ::    *[a 5 b]          =*[a b]");
+		showDebug("<- 26 ::    *[a 5 b]          =*[a b]");
 		return tis(tar([a, obj]));
 	}
 	// #28: if
 	else if (op == OP_IF) { 
-		console.log("28 ::    *[a 6 b c d]      *[a 2 [0 1] 2 [1 c d] [1 0] 2 [1 2 3] [1 0] 4 4 b]");
+		showDebug("28 ::    *[a 6 b c d]      *[a 2 [0 1] 2 [1 c d] [1 0] 2 [1 2 3] [1 0] 4 4 b]");
 		if (!hasThreeItems(obj))
 			throw Error("Invalid arguments for the 6 operator");
 
@@ -366,8 +366,7 @@ function parseNock(str) {
 	// This will only work if we start with one of our operators
 
 	if (!str.match(operators)) {
-		console.log("Invalid function: " + str);
-		console.log("Functions should start with one of the following: ? / * + =");
+		throw Error("Invalid function: " + str + "\nFunctions should start with one of the following: ? / * + =");
 	}
 
 	var tokens = tokenize(str);
