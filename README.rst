@@ -1,20 +1,33 @@
 =====
-Nock, yo
+Nock!
 =====
 
-This is an implementation of Nock in JavaScript.  It borrows very heavily from `this python implementation`_, which you really ought to check out.  This implementation is for pedagogic purposes, i.e. to let people play around with nock in a web browser.  It's not intended to power a browser-based Arvo implementation, although if someone wants to take this and make that happen, that would be pretty awesome.
+This is an implementation of Nock in JavaScript.  It borrows from `this python implementation`_, which you really ought to check out.  This implementation is for pedagogic purposes, i.e. to let people play around with Nock and see what's going on.  It's not intended to power a browser-based Arvo implementation, although if someone wants to take this and make that happen, that would be pretty awesome.
 
 .. _this python implementation: https://github.com/eykd/nock
 
+====
+Usage
+====
+Despite being JavaScript, this has no web-based interface.  Instead, it runs
+using `node.js`_.  Run repl.js like so:
 
-Credits
-=======
+.. _node.js: http://nodejs.org
 
-Thanks to James Tauber, for his original `pynock`_ and David Eyk for his `python implementation`. And `Curtis Yarvin`_, the
-reason we're all here talking about this stuff..
+node repl.js
 
-.. _pynock: https://github.com/jtauber/pynock/
-.. _python implementation: https://github.com/eykd/nock
-.. _Curtis Yarvin: http://moronlab.blogspot.com
+====
+TODO
+====
 
+Two important notes:
 
+This is not working 100%.  Specifically, I can't get the reduction from line 30
+to work, the "function composition using an ordered pair", and the decrement
+function from `Chapter 2`_ of the Urbit documentation causes all heck to break loose.  I think this has something to do with how I'm setting up brackets.  
+
+I would like to create a web-based REPL and haven't quite gotten around to it.
+Perhaps someone with more brains, experience and/or free time could take a
+swing at that.  The world would be a much better place if you did.
+
+.. _Chapter 2: http://www.urbit.org/2013/08/22/Chapter-2-nock.html
