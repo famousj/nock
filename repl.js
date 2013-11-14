@@ -23,8 +23,14 @@ process.stdin.on('data', function(line) {
 	line = line + "";
 	line = line.replace(/^\s\s*/, '').replace(/\s\s*$/, '');
 
-	if (line != "") 
-		evalNock(line);
+	if (line != "")  {
+		try {
+			evalNock(line);
+		}
+		catch (error) {
+			console.log(error + "");
+		}
+	}
 	
 	process.stdout.write("> ");
 });
