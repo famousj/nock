@@ -4,7 +4,7 @@ Nock!
 
 If you don't know what Nock is, go `here`_ and keep reading.
 
--- _here: http://urbit.org
+.. _here: http://urbit.org
 
 This is an implementation of Nock in JavaScript.  It borrows from `this python implementation`_, which is worth checking out.  This implementation is for pedagogic purposes, i.e. to let people play around with Nock and see how it works.  It's not intended to power a browser-based Arvo implementation, although if someone wants to take this and make that happen, that would be pretty awesome.
 
