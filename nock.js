@@ -9,8 +9,24 @@ NOCKJS_VERSION = "0.1";
 
 DEBUG = 1;
 
+var indent = 0;
+
 function showDebug(msg) {
-	if (DEBUG) console.log(msg);
+	if (DEBUG) {
+		for (var i = 0; i < indent; i++) 
+			process.stdout.write("    ");
+			
+		console.log(msg);
+	}
+}
+
+function increaseIndent() {
+	indent++;
+}
+
+function decreaseIndent() {
+	if (indent > 0) 
+		indent--;
 }
 
 var YES = 0;
@@ -37,25 +53,11 @@ function wut(noun) {
 	}
 }
 
-
-function aorc(a) {
-    /* 
-	 * Return an atom or a properly structured cell.  
-	 */
-    
-    if (Array.isArray(a)) {
-        return structureList(a);
-    }
-    else  {
-		return a;
-    }
-}
-
 function structureList(list) {
     /* Properly structure an improper list.
     2  ::    [a b c]           [a [b c]]
-    */
-	
+    */ 
+
 	// If this list isn't actually a list, return it
 	if (!Array.isArray(list))
 		return list;
@@ -84,6 +86,7 @@ function lus(noun) {
 
 	if (Array.isArray(noun)) {
     	showDebug("6  ::    +[a b]            +[a b]");
+		showDebug("CRASH!");
 		return "+" + formatList(noun);
 	}
 	else {
@@ -108,6 +111,22 @@ function tis(noun) {
 	}
 }
 
+function hasTwoItems(list) {
+	/*
+	 * Returns true if the (properly structured) list has two or more items in it
+	 */
+
+	return (Array.isArray(list) && list.length >= 2);
+}
+
+function hasThreeItems(list) {
+	/*
+	 * Returns true if the (properly structured) list has three or more items in it
+	 */
+
+	return (hasTwoItems(list) && hasTwoItems(list[1]));
+}
+
 function fas(list) {
 	/*
     Return the specified slot from the given noun.
@@ -118,20 +137,24 @@ function fas(list) {
     16 ::    /[(a + a + 1) b]  /[3 /[a b]]
     */
 
-	showDebug("/" + formatList(list));
+	if (!hasTwoItems(list)) 
+		throw Error("Invalid arguments for the / operator");
 
 	var n = list[0];
-	var noun;
 	if (list.length == 2) 
-		noun = aorc(list[1]);
-	else 
-		noun = aorc(list.slice(1));
+		noun = structureList(list[1]) ;
+	else
+		noun = structureList(list.slice(1));
 
 	if (n == 1) {
 		showDebug("12 ::    /[1 a]            a");
 		return noun;
 	}
-	else if (n == 2) {
+
+	if (!hasThreeItems(list)) 
+		throw Error("Invalid arguments for the / operator");
+
+	if (n == 2) {
 		showDebug("13 ::    /[2 a b]          a");
 		return noun[0];
 	}
@@ -142,21 +165,44 @@ function fas(list) {
 	// #15, even slot index
     else if (!(n % 2)) {
 		showDebug("15 ::    /[(a + a) b]      /[2 /[a b]]");
-		return "/[2 /[" + n / 2 + " " + formatList(noun) + "]]";
+		showDebug("/[2 /[" + n / 2 + " " + formatList(noun) + "]]");
+
+		increaseIndent();
+
+		showDebug("/[a b]");
+		showDebug("/" + formatList([ (n / 2), noun]));
+		var innerFas = fas([ n/2, noun]);
+		showDebug(formatList(innerFas))
+
+		decreaseIndent();
+
+		showDebug("");
+		showDebug("/[2 " + formatList(innerFas) + "]");
+		var outerFas = fas([2, innerFas]);
+
+
+		return outerFas;
 	}
 	// #16, odd slot index
     else {
 		showDebug("16 ::    /[(a + a + 1) b]  /[3 /[a b]]");
-		return fas([3, fas([(n - 1) / 2, noun])]);
+		showDebug("/[3 /[" + (n-1) / 2 + " " + formatList(noun) + "]]");
+
+		increaseIndent();
+
+		showDebug("/[a b]");
+		showDebug("/" + formatList([((n-1) / 2), noun]));
+		var innerFas = fas([ (n-1) / 2, noun]);
+		showDebug(formatList(innerFas));
+
+		decreaseIndent();
+		showDebug("/" + formatList([3, innerFas]));
+		var outerFas = fas([3, innerFas]);
+
+
+		return outerFas;
+
 	}
-}
-
-function hasTwoItems(list) {
-	return (Array.isArray(list) && list.length >= 2);
-}
-
-function hasThreeItems(list) {
-	return (hasTwoItems(list) && hasTwoItems(list[1]));
 }
 
 OP_FAS = 0;
@@ -188,10 +234,15 @@ function tar(noun) {
 	32 ::    *[a 10 [b c] d]   *[a 8 c 7 [0 3] d]
 	33 ::    *[a 10 b c]       *[a c]
     */
-	showDebug("*" + formatList(noun));
 
 	var nounString = JSON.stringify(noun);
     noun = structureList(noun);
+
+	if (!Array.isArray(noun)) {
+		showDebug("35 ::    *a                  *a");
+		showDebug("CRASH!");
+		return "*" + noun;
+	}
 
 	if (!hasThreeItems(noun))
 			throw Error("Invalid parameters for tar: " + nounString);
@@ -203,11 +254,25 @@ function tar(noun) {
 	// #19
 	if (Array.isArray(op)) {
 		showDebug("19 ::    *[a [b c] d]      [*[a b c] *[a d]]");
-		return [tar([a, op]), tar([a, obj])];
+
+		increaseIndent();
+		showDebug("*[a b c]");
+		showDebug("*" + formatList([a, op]));
+		var tar1 = tar([a, op]);
+
+		showDebug("");
+		showDebug("*[a d]");
+		showDebug("*" + formatList([a, obj]));
+		var tar2 = tar([a, obj]);
+
+		decreaseIndent();
+
+		return [tar1, tar2];
 	}
 	// #21: tree addressing
 	else if (op == OP_FAS) {
     	showDebug("21 ::    *[a 0 b]          /[b a]");
+		showDebug("/" + formatList([obj, a]));
 		return fas([obj, a]);
 	}
 	// #22: constant operator
@@ -224,12 +289,44 @@ function tar(noun) {
 
 		b = obj[0];
 		c = obj[1];
-		return tar([tar([a, b]), tar([a, c])]);
+		
+		increaseIndent();
+		showDebug("*[a b]");
+		showDebug("*" + formatList([a, b]));
+		var tar1 = tar([a, b]);
+		showDebug(formatList(tar1));
+
+		showDebug("");
+		showDebug("*[a c]");
+		showDebug("*" + formatList([a, c]));
+		var tar2 = tar([a, c]);
+		showDebug(formatList(tar2));
+
+		decreaseIndent();
+
+		showDebug("");
+		showDebug("*[*[a b] *[a c]]");
+		showDebug("*" + formatList([tar1, tar2]));
+
+		return tar([tar1, tar2]);
 	}
 	// #24: ?
 	else if (op == OP_WUT) { 
 		showDebug("24 ::    *[a 3 b]          ?*[a b]");
-		return wut(tar([a, obj]));
+
+		increaseIndent();
+		showDebug("*[a b]");
+		showDebug("*" + formatList([a, obj]));
+		tar = tar([a, obj]);
+		showDebug(formatList(tar));
+
+		decreaseIndent();
+
+		showDebug("");
+		showDebug("?*[a b]");
+		showDebug("?*" + formatList(tar));
+
+		return wut(tar);
 	}
 	// #25: +
 	else if (op == OP_LUS) { 
@@ -463,6 +560,10 @@ function formatList(result) {
 }
 
 // Exports for node.js
+//
+exports.NOCK_VERSION = "5K";
+exports.NOCKJS_VERSION = "0.1";
+
 exports.parseNock = function(command) {
 	return parseNock(command);
 }
