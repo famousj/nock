@@ -175,6 +175,7 @@ function tar(noun) {
     /*
 	* -- Reduce a Nock expression.
     19 ::    *[a [b c] d]      [*[a b c] *[a d]]
+
     21 ::    *[a 0 b]          /[b a]
     22 ::    *[a 1 b]          b
     23 ::    *[a 2 b c]        *[*[a b] *[a c]]
@@ -202,7 +203,8 @@ function tar(noun) {
 	
 	// #19
 	if (Array.isArray(op)) {
-		showDebug("19 ::    *[a [b c] d]      [*[a b c] *[a d]]");
+		showDebug("19 ::    *[a [[b c] d]]      [*[a [b c]] *[a d]]");
+
 		return [tar([a, op]), tar([a, obj])];
 	}
 	// #21: tree addressing
@@ -278,8 +280,8 @@ function tar(noun) {
 
 		// TODO: This uses the reduction from Chap 2's appendix.  The unreduced
 		// version doesn't quite work as expected.
-		//return tar([a, 7, [[7, [0, 1], b], 0, 1], c]); 
-		return tar([[tar([a, b]),  a], c]);
+		return tar([a, 7, [[7, [0, 1], b], 0, 1], c]); 
+		//return tar([[tar([a, b]),  a], c]);
 	}
 	// #31: core
 	else if (op == OP_H09) {
