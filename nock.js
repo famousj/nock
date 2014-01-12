@@ -1,7 +1,7 @@
 /*
  * For details as to what's going on here, check out Chapter 2 of the Urbit
  * documentation:
- * http://www.urbit.org/2013/08/22/Chapter-2-nock.html
+ * http://www.urbit.org/2013/11/18/urbit-is-easy-ch2.html
  */
 
 NOCK_VERSION = "5K";
@@ -32,10 +32,31 @@ function decreaseIndent() {
 var YES = 0;
 var NO  = 1;
 
+var operators = "[\\?\\+\\=\\/\\*]";
+var atom = "[\\d.]+";
+var bracket = "[\\[\\]]";
+
+function isOperator(token) {
+	return token.match(operators);
+}
+
+function isAtom(token) {
+	return token.match(atom);
+}
+
 /*
-The following functions make use of the official Urbit squiggle name conventions.  See here for details:
-http://www.urbit.org/2013/08/22/Chapter-4-syntax.html
+The following functions make use of the official Urbit rune name conventions.  
+This is also to be found in Chapter 2:
+http://www.urbit.org/2013/11/18/urbit-is-easy-ch2.html
 */
+
+function _wut(noun) {
+    /*
+	? :: Test whether a noun is a cell or an atom.
+    */
+
+	return Array.isArray(noun) && noun.length != 1 ? YES : NO;
+}
 
 function wut(noun, debug) {
     /*
@@ -44,7 +65,8 @@ function wut(noun, debug) {
 	
 	debug = typeof debug !== 'undefined' ? debug : false;
 
-	if (Array.isArray(noun)) {
+	if (Array.isArray(noun) || 
+		typeof noun == 'string' && noun[0] == "[" && noun[noun.length-1] == "]") {
 		if (debug) showDebug("4  ::    ?[a b]            0");
 		return YES;
 	}
@@ -56,7 +78,7 @@ function wut(noun, debug) {
 
 function structureList(list) {
     /* Properly structure an improper list.
-    2  ::    [a b c]           [a [b c]]
+    2  ::    a b c]           a [b c]]
     */ 
 
 	// If this list is actually an atom
@@ -73,7 +95,24 @@ function structureList(list) {
 		return [structureList(list[0]), structureList(list[1])];
     }
     else {
-        return [structureList(list[0]), structureList(list.slice(1))];
+		// 2  ::    a b c]           a [b c]]
+		showDebug("2  ::    a b c]           a [b c]]");
+
+		increaseIndent();
+		showDebug("[b c]");
+		var c = structureList(list.pop());
+		var b = structureList(list.pop());
+		var cell = [b, c];
+		showDebug(formatList(cell));
+
+		decreaseIndent();
+
+		list.push(cell);
+
+		showDebug("");
+		showDebug(formatList(list));
+
+        return structureList(list);
     }
 }
 
@@ -154,10 +193,12 @@ function fas(list) {
 		throw Error("Invalid arguments for the / operator");
 
 	var n = list[0];
+	/*
 	if (list.length == 2) 
 		noun = structureList(list[1]) ;
 	else
 		noun = structureList(list.slice(1));
+	*/
 
 	if (n == 1) {
 		showDebug("12 ::    /[1 a]            a");
@@ -251,7 +292,7 @@ function tar(noun) {
     */
 
 	var nounString = JSON.stringify(noun);
-    noun = structureList(noun);
+    //noun = structureList(noun);
 
 	if (wut(noun) == NO) {
 		showDebug("35 ::    *a                  *a");
@@ -259,8 +300,9 @@ function tar(noun) {
 		return "*" + noun;
 	}
 
-	if (!hasThreeItems(noun))
-			throw Error("Invalid parameters for tar: " + nounString);
+	if (!hasThreeItems(noun)) {
+		throw Error("Invalid parameters for tar: " + nounString);
+	}
 
     var a = noun[0];
 	var op = noun[1][0];
@@ -472,30 +514,31 @@ function tar(noun) {
 	}
 }
 
-var operators = "[\\?\\+\\=\\/\\*]";
-
 function tokenize(str) {
 	/* 
 	 * Returns an array of tokens for a given nock expression
 	 */
 
 	var original = str;
-	var tokens = new Array;
+	var tokens = [];
 
 	while (str != "") {
-		var operators_regex = new RegExp("^(" + operators + ")\s*(.*)");
+		var operators_regex = new RegExp("^(" + operators + ")\\s*(.*)");
+		var atom_regex = new RegExp("^(" + atom + ")\\s*(.*)");
+		var bracket_regex = new RegExp("^\\s*(" + bracket + ")\\s*(.*)");
+
 		// If it's an operator
 		if ((match = str.match(operators_regex)) != null) {
 			tokens.push(match[1]);
 			str = match[2];
 		}
 		// If it's an atom
-		else if ((match = str.match(/^([\d\.]+)\s*(.*)/)) != null) {
+		else if ((match = str.match(atom_regex)) != null) {
 			tokens.push(match[1]);
 			str = match[2];
 		}
 		// If it's either sort of bracket
-		else if ((match = str.match(/^\s*([\[\]])\s*(.*)/)) != null) {
+		else if ((match = str.match(bracket_regex)) != null) {
 			tokens.push(match[1]);
 			str = match[2];
 		}
@@ -507,21 +550,214 @@ function tokenize(str) {
 	return tokens;
 }
 
-function parseNock(str) {
-	/*
-	 * Take a nock string and generate the equivalent JavaScript function
-	 */
-	if (DEBUG > 1) console.log("Parsing: '" + str + "'");
+/*
+function verifyCell(tokens, index) { 
+	var atoms = 0; 
+	//var depth = 0; 
+	
+	var end = i;
+			
+	while (index > 0) {
+		index--;
+		token = newTokens[i];
 
-	// This will only work if we start with one of our operators
+		console.log("Next: '" + token + "'");
+		console.log(atom);
 
-	if (!str.match(operators)) {
-		throw Error("Invalid function: " + str + "\nFunctions should start with one of the following: ? / * + =");
+		if (token.match("[")) {
+			if (atoms == 2) {
+				return index;
+			
+			}
+			else if (isAtom(token)) {
+				console.log("ATOM");
+				atoms++; 
+				if (atoms > 2) {
+					console.log("Too many atoms!");
+					console.log(expressionToString(newTokens));
+					newTokens.splice(end, 0, "]");
+					console.log(expressionToString(newTokens));
+					newTokens.splice(i+1, 0, "[");
+					console.log(expressionToString(newTokens));
+					return newTokens;
+				}
+			}
+			else {
+				break;
+			}
+		}
+	// TODO: If we're here, we have unbalanced brackets
+	}
+}
+*/
+
+function expressionToString(tokens) {
+	var str = "";
+
+	for (i = 0; i < tokens.length; i++) {
+		token = tokens[i];
+
+		if (isAtom(token) && tokens.length > i+1 && tokens[i+1] != "]") {
+			str += token + " ";
+		}
+		else {
+			str += token;
+		}
 	}
 
-	var tokens = tokenize(str);
+	return str;
+}
 
-	return readFromTokens(tokens);
+function popNoun(expr) {
+	/*
+	 * Remove the last noun in the list of tokens.  
+	 * This routine is optimistic, in that it assumes that all tokens are
+	 * either valid operators or valid atoms, and it assumes that all lists are
+	 * pairs (i.e. cells).
+	 * If the last token on the list is an operator, it returns that, even
+	 * though that's totally not a noun.  Otherwise, this would not work with
+	 * nested operations, (e.g. *[*[1 2] *[3 4]]).
+	 */
+
+	var token = expr.pop();
+
+	if (token == "]") {
+		var noun = [];
+		while (expr[expr.length-1] != "[") {
+			var newNoun = popNoun(expr);
+
+			if (Array.isArray(newNoun)) {
+
+				for (var i = 0; i < newNoun.length; i++) {
+					noun.push(newNoun[i]);
+				}
+			}
+			else {
+				noun.unshift(newNoun);
+			}
+		}
+
+		noun.unshift(expr.pop());
+
+		noun.push(token);
+
+		if (isOperator(expr[expr.length-1])) {
+			noun.unshift(expr.pop());
+		}
+
+		return noun;
+	}	
+	else {
+		return token;
+	}
+}
+
+function expressionsAreTheSame(expr1, expr2) {
+	return expressionToString(expr1) == expressionToString(expr2);
+}
+
+function validateAndAddBrackets(expr) {
+	/*
+	 6  ::    [a b c]          [a [b c]]
+	 Take an array of tokens.  If there's a bracket with three (or more) 
+	 nouns, add brackets for the last two nouns.  
+	 Otherwise, return the token array unchanged.
+	 In the process of which, validate that there's nothing off about this noun
+	 */
+	
+
+	// Just an atom is valid
+	if (expr.length == 1) {
+		if (!isAtom(expr[0]))
+			throw Error("Invalid expression: " + expressionToString(expr));
+		
+		return expr;
+	}
+
+	// An operator and an atom is also valid
+	if (expr.length == 2) {
+		if (isOperator(expr[0]) && isAtom(expr[1]))
+			return expr;
+	}
+		
+	var newexpr = expr.slice(0);
+
+	// The last character should be "]"
+	var ser = newexpr.pop();
+
+	if (ser != "]") {
+		throw Error("Invalid expression: " + expressionToString(expr));
+	}
+	
+	var c = popNoun(newexpr);
+
+	var newc = validateAndAddBrackets(c);
+	if (!expressionsAreTheSame(c, newc)) 
+		return newexpr.concat(newc, ser);
+
+	// Don't allow a cell with one item
+	if (newexpr[newexpr.length-1] == "[") 
+		throw Error("Invalid expression: " + expressionToString(expr));
+
+	var b = popNoun(newexpr);
+	var newb = validateAndAddBrackets(b);
+	if (!expressionsAreTheSame(b, newb)) 
+		return newexpr.concat(newb).concat(c).concat(ser);
+
+	var a = newexpr.pop();
+
+	// At this point if we have a "[", this rule doesn't apply
+	if (a == "[") {
+		return expr;
+	}
+
+	return newexpr.concat(a, "[", b, c, "]", ser);
+
+	/*
+	if (expr.length <= 2) {
+		if (expr.indexOf("[") != -1 || expr.indexOf("]") != -1)
+			throw Error("Ill-formed expression: " + expressionToString(expr));
+
+		return expr;
+	}
+	*/
+}
+
+function evalNock(str) {
+	/*
+	 * Take a string of nock pseudocode and run through the reductions until we
+	 * detect a crash or get a value.
+	 */
+	
+	if (DEBUG > 1) console.log("Evaluating: '" + str + "'");
+
+	var operatorRegex = "^" + operators;
+	if (!isOperator(str)) {
+	 	showDebug("5  ::    nock(a)             *a");
+		str = "*" + str;
+		showDebug(str);
+	}
+
+	var expr = tokenize(str);
+
+	var done = false;
+
+	while (!done) {
+		var newExpr = validateAndAddBrackets(expr);
+
+		if (!expressionsAreTheSame(expr, newExpr)) {
+			showDebug("6  ::    [a b c]          [a [b c]]");
+			showDebug(expressionToString(newExpr));
+			expr = newExpr;
+			continue;
+		}
+
+		done = true;
+	}
+
+	showDebug("===");
+
+	return expressionToString(expr);
 }
 
 function readFromTokens(tokens) {
@@ -534,7 +770,7 @@ function readFromTokens(tokens) {
 
 	// If it's an operator, return the appropriate operator function, and 
 	// recursively call this function to get the parameters
-	if ((match = token.match(operators)) != null) {
+	if (isOperator(token)) {
 		var params = readFromTokens(tokens);
 		if (token == "?") {
 			return function() {
@@ -562,12 +798,11 @@ function readFromTokens(tokens) {
 			}
 		}
 	}
-	// Accept all unsigned integers
-	else if (token.match(/\d+/)) {
+	else if (isAtom(token)) {
 		return token;
 	}
 	if (token == "[") {
-		var array = new Array();
+		var array = [];
 		while (tokens[0] != "]")  {
 			array.push(readFromTokens(tokens));
 		}
@@ -614,11 +849,11 @@ function formatList(result) {
 
 // Exports for node.js
 //
-exports.NOCK_VERSION = "5K";
-exports.NOCKJS_VERSION = "0.1";
+exports.NOCK_VERSION = NOCK_VERSION;
+exports.NOCKJS_VERSION = NOCKJS_VERSION;
 
-exports.parseNock = function(command) {
-	return parseNock(command);
+exports.evalNock = function(command) {
+	return evalNock(command);
 }
 
 exports.formatList = function(list) {
