@@ -3,6 +3,11 @@
 var nock = require("./nock.js");
 
 function evalNock(command) {
+	console.log(nock.evalNock(command));
+
+	return;
+
+
 	var jsFunction = nock.parseNock(command);
 
 	var result = jsFunction();
