@@ -5,7 +5,7 @@
  */
 
 NOCK_VERSION = "5K";
-NOCKJS_VERSION = "0.1";
+NOCKJS_VERSION = "0.2";
 
 DEBUG = 1;
 
