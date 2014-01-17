@@ -2,6 +2,10 @@
 
 var nock = require("./nock.js");
 
+function setDebugging(debugging) {
+	nock.setDebugging(debugging);
+}
+
 function evalNock(command) {
 	console.log(nock.evalNock(command));
 
@@ -15,6 +19,8 @@ function evalNock(command) {
 }
 
 'use strict';
+
+setDebugging(false);
 
 console.log("Nock ver. " + nock.NOCK_VERSION + 
 			"; Nock.js ver. " + nock.NOCKJS_VERSION);
