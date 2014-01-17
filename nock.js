@@ -70,13 +70,13 @@ function wut(noun, debug) {
 
 	debug = typeof debug !== 'undefined' ? debug : false;
 
-	if (Array.isArray(noun) && noun.length != 1) {
-		if (debug) showDebug("8  ::    ?[a b]           0");
-		return YES;
-	}
-	else {
+	if (isAtom(noun)) {
 		if (debug) showDebug("9  ::    ?a               1");
 		return NO;
+	}
+	else {
+		if (debug) showDebug("8  ::    ?[a b]           0");
+		return YES;
 	}
 }
 
@@ -120,22 +120,6 @@ function tis(noun) {
 	}
 }
 
-function hasTwoItems(list) {
-	/*
-	 * Returns true if the (properly structured) list has two or more items in it
-	 */
-
-	return (wut(list) == YES && list.length >= 2);
-}
-
-function hasThreeItems(list) {
-	/*
-	 * Returns true if the (properly structured) list has three or more items in it
-	 */
-
-	return (hasTwoItems(list) && hasTwoItems(list[1]));
-}
-
 function fas(noun) {
 	/*
     Return the specified slot from the given noun.
@@ -156,8 +140,8 @@ function fas(noun) {
 
 	var sel = newNoun.shift();
 
-	var axis = shiftNoun(newNoun);
-	var tree = shiftNoun(newNoun);
+	var axis = shiftExpression(newNoun);
+	var tree = shiftExpression(newNoun);
 
 	if (wut(axis, false) == YES) {
 		showDebug("21 ::    /a               /a");
@@ -176,8 +160,8 @@ function fas(noun) {
 		return noun;
 	}
 
-	var a = shiftNoun(newTree);
-	var b = shiftNoun(newTree);
+	var a = shiftExpression(newTree);
+	var b = shiftExpression(newTree);
 
 	if (axis == 2) {
 		showDebug("17 ::    /[2 a b]         a");
@@ -227,8 +211,8 @@ function tar(noun) {
 
 	var sel = newNoun.shift();
 
-	var subject = shiftNoun(newNoun);
-	var formula = shiftNoun(newNoun);
+	var subject = shiftExpression(newNoun);
+	var formula = shiftExpression(newNoun);
 
 	if (wut(formula, false) == NO) {
 		showDebug("39 ::    *a               *a");
@@ -237,7 +221,7 @@ function tar(noun) {
 
 	sel = formula.shift();
 	ser = formula.pop();
-	var operator = shiftNoun(formula);
+	var operator = shiftExpression(formula);
 	var operands = formula;
 
 	if (wut(operator, false) == YES) {
@@ -264,13 +248,13 @@ function tar(noun) {
 		}
 
 		sel = operands.shift();
-		var b = shiftNoun(operands);
-		var c = shiftNoun(operands);
+		var b = shiftExpression(operands);
+		var c = shiftExpression(operands);
 
 		showDebug("27 ::    *[a 2 b c]       *[*[a b] *[a c]]");
-		showDebug("a: " + nounToString(subject));
-		showDebug("b: " + nounToString(b));
-		showDebug("c: " + nounToString(c));
+		showDebug("a: " + expressionToString(subject));
+		showDebug("b: " + expressionToString(b));
+		showDebug("c: " + expressionToString(c));
 		return [].concat("*", "[", "*", "[", subject, b, "]",
 								   "*", "[", subject, c, "]", "]");
 	}
@@ -297,15 +281,15 @@ function tar(noun) {
 		}
 
 		sel = operands.shift();
-		var b = shiftNoun(operands);
+		var b = shiftExpression(operands);
 		if (wut(operands, false) == NO) {
 			showDebug("39 ::    *a               *a");
 			return noun;
 		}
 
 		sel = operands.shift();
-		var c = shiftNoun(operands);
-		var d = shiftNoun(operands);
+		var c = shiftExpression(operands);
+		var d = shiftExpression(operands);
 		showDebug(
 "32 ::    *[a 6 b c d]     *[a 2 [0 1] 2 [1 c d] [1 0] 2 [1 2 3] [1 0] 4 4 b]");
 
@@ -323,8 +307,8 @@ function tar(noun) {
 		}
 
 		sel = operands.shift();
-		var b = shiftNoun(operands);
-		var c = shiftNoun(operands);
+		var b = shiftExpression(operands);
+		var c = shiftExpression(operands);
 
 		showDebug("33 ::    *[a 7 b c]       *[a 2 b 1 c]");
 		return [].concat("*", "[", subject, 2, b, 1, c, "]");
@@ -336,8 +320,8 @@ function tar(noun) {
 		}
 
 		sel = operands.shift();
-		var b = shiftNoun(operands);
-		var c = shiftNoun(operands);
+		var b = shiftExpression(operands);
+		var c = shiftExpression(operands);
 
 		showDebug("34 ::    *[a 8 b c]       *[a 7 [[7 [0 1] b] 0 1] c]");
 		return [].concat("*", "[", subject, 7, "[", "[", 7, "[", 0, 1, "]",
@@ -350,8 +334,8 @@ function tar(noun) {
 		}
 
 		sel = operands.shift();
-		var b = shiftNoun(operands);
-		var c = shiftNoun(operands);
+		var b = shiftExpression(operands);
+		var c = shiftExpression(operands);
 
 		showDebug("35 ::    *[a 9 b c]       *[a 7 c 2 [0 1] 0 b]");
 		return [].concat("*", "[", subject, 7, c, 2, "[", 0, 1, "]", 0, b, "]");
@@ -364,7 +348,7 @@ function tar(noun) {
 
 		sel = operands.shift();
 		ser = operands.pop();
-		var firstOperand = shiftNoun(operands);
+		var firstOperand = shiftExpression(operands);
 
 		if (wut(firstOperand, false) == NO) {
 			var b = firstOperand;
@@ -375,10 +359,10 @@ function tar(noun) {
 		}
 
 		sel = firstOperand.shift();
-		var b = shiftNoun(firstOperand);
-		var c = shiftNoun(firstOperand);
+		var b = shiftExpression(firstOperand);
+		var c = shiftExpression(firstOperand);
 
-		var d = shiftNoun(operands);
+		var d = shiftExpression(operands);
 
 
 		showDebug("36 ::    *[a 10 [b c] d]  *[a 8 c 7 [0 3] d]");
@@ -429,7 +413,7 @@ function tokenize(str) {
 	return tokens;
 }
 
-function nounToString(tokens) {
+function expressionToString(tokens) {
 	var str = "";
 
 	if (!Array.isArray(tokens)) {
@@ -450,15 +434,18 @@ function nounToString(tokens) {
 	return str;
 }
 
-function popNoun(expr) {
+function popExpression(expr) {
 	/*
-	 * Remove the last noun in the list of tokens.  
-	 * This routine is optimistic, in that it assumes that if a token is not a
-	 * valid operator, it's a valid atom.  This also doesn't check if it's a
-	 * pair, it just makes sure the brackets are balanced.
-	 * If the last token on the list is an operator, it returns that, even
-	 * though that's totally not a noun.  Otherwise, this would not work with
-	 * nested operations, (e.g. *[*[1 2] *[3 4]]).
+	 * Remove the last expression in the list of tokens.  
+	 *
+	 * For the purposes of this module an "Expression" is either a noun or an
+	 * operator and a noun. For instance, an expression can be 44, [1 2], ?44, 
+	 * ?[1 2].
+	 *
+	 * 
+	 * This routine assumes that if a token is not a * valid operator, it's a 
+	 * valid atom.  This also doesn't check if it's a pair, it just makes sure 
+	 * the brackets are balanced.
 	 */
 
 	var token = expr.pop();
@@ -466,16 +453,16 @@ function popNoun(expr) {
 	if (token == "]") {
 		var noun = [];
 		while (expr[expr.length-1] != "[") {
-			var newNoun = popNoun(expr);
+			var newExpr = popExpression(expr);
 
-			if (Array.isArray(newNoun)) {
+			if (Array.isArray(newExpr)) {
 
-				for (var i = newNoun.length-1; i >= 0; i--) {
-					noun.unshift(newNoun[i]);
+				for (var i = newExpr.length-1; i >= 0; i--) {
+					noun.unshift(newExpr[i]);
 				}
 			}
 			else {
-				noun.unshift(newNoun);
+				noun.unshift(newExpr);
 			}
 		}
 
@@ -494,14 +481,12 @@ function popNoun(expr) {
 	}
 }
 
-function shiftNoun(expr) {
+function shiftExpression(expr) {
 	/*
-	 * Remove the first noun in the list of tokens.  
-	 * This routine is optimistic, in that it assumes that if a token is not a
-	 * valid operator, it's a valid atom.  This also doesn't check if it's a
+	 * Remove the first expression in the list of tokens.  
+	 * This routine assumes that if a token is not a valid operator, it's a 
+	 * valid atom.  This also doesn't check if it's a
 	 * pair, it just makes sure the brackets are balanced.
-	 * This will also return the operator (e.g. the wut in "?[1 2]"), even 
-	 * though that's not technically a noun.
 	 */
 
 	var noun = [];
@@ -516,15 +501,15 @@ function shiftNoun(expr) {
 	
 	if (token == "[") {
 		while (expr[0] != "]") {
-			var newNoun = shiftNoun(expr);
+			var newExpr = shiftExpression(expr);
 
-			if (Array.isArray(newNoun)) {
-				for (var i = 0; i < newNoun.length; i++) {
-					noun.push(newNoun[i]);
+			if (Array.isArray(newExpr)) {
+				for (var i = 0; i < newExpr.length; i++) {
+					noun.push(newExpr[i]);
 				}
 			}
 			else {
-				noun.push(newNoun);
+				noun.push(newExpr);
 			}
 		}
 
@@ -558,77 +543,78 @@ function indexOfNextOperator(noun, startingAt) {
 	return -1;
 }
 
-function nounsAreTheSame(expr1, expr2) {
-	return nounToString(expr1) == nounToString(expr2);
+function expressionsAreTheSame(expr1, expr2) {
+	return expressionToString(expr1) == expressionToString(expr2);
 }
 
-function validateNoun(noun) {
+function validateExpression(expr) {
 
-	// Any number of operators are (theoretically) valid.
+	// Any number of operators prefixing the expression are valid.
 	var index = 0;
-	while (isOperator(noun[index])) 
+	while (isOperator(expr[index])) 
 		index++;
 
 	// Just operators (optionally) and an atom is valid
-	if (noun.length == index+1) {
-		return isAtom(noun[index]);
+	if (expr.length == index+1) {
+		return isAtom(expr[index]);
 	}
 
 	// Make sure we either start with a [ or with an op[
-	if (noun[index] != "[") 
+	if (expr[index] != "[") 
 		return false;
 
 	// The final token should be ]
-	if (noun[noun.length-1] != "]")
+	if (expr[expr.length-1] != "]")
 		return false;
 
 	return true;
 }
 
-function addBrackets(noun) {
+function addBrackets(expr) {
 	/*
 	 6  ::    [a b c]          [a [b c]]
 	 Take an array of tokens.  If there's a bracket with three (or more) 
-	 nouns, add brackets for the last two nouns.  
+	 nouns (or expressions, since those will (hopefully) get reduced to 
+	 expressions), add brackets for the last two nouns.  
 	 Otherwise, return the token array unchanged.
-	 In the process of which, validate that there's nothing off about this noun
 	 */
 	
-	if (!Array.isArray(noun) || noun.length <= 2)
-		return noun;
+	if (!Array.isArray(expr) || expr.length <= 2)
+		return expr;
 
-	var newNoun = noun.slice(0);
+	var newExpr = expr.slice(0);
 
 	// The last character should be "]"
-	var ser = newNoun.pop();
+	var ser = newExpr.pop();
 
-	var c = popNoun(newNoun);
+	var c = popExpression(newExpr);
 
-	// Recursive call to add brackets to this noun, possibly
+	// Recursive call to add brackets to this expr, possibly
 	var newC = addBrackets(c);
 
-	if (!nounsAreTheSame(newC, c)) 
-		return newNoun.concat(newC, ser);
+	if (!expressionsAreTheSame(newC, c)) 
+		return newExpr.concat(newC, ser);
 
 	// Don't allow a cell with one item
-	if (newNoun[newNoun.length-1] == "[") 
-		throw Error("Can't add brackets to expression: " + nounToString(noun));
+	if (newExpr[newExpr.length-1] == "[") 
+		throw Error("Can't add brackets to expression: " + 
+						expressionToString(expr));
 
-	var b = popNoun(newNoun);
+	var b = popExpression(newExpr);
 
 	var newB = addBrackets(b);
-	if (!nounsAreTheSame(newB, b)) 
-		return newNoun.concat(newB, c, ser);
+	if (!expressionsAreTheSame(newB, b)) 
+		return newExpr.concat(newB, c, ser);
 
 	// At this point if we have a "[", this rule doesn't apply
-	if (newNoun[newNoun.length-1] == "[") {
-		return noun;
+	if (newExpr[newExpr.length-1] == "[") {
+		return expr;
 	}
 
-	showDebug("b: " + nounToString(b));
-	showDebug("c: " + nounToString(c));
+	showDebug("b: " + expressionToString(b));
+	showDebug("c: " + expressionToString(c));
 
-	return newNoun.concat("[", b, c, "]", ser);
+	return newExpr.concat("[", b, c, "]", ser);
 }
 
 function evalNock(str) {
@@ -648,105 +634,105 @@ function evalNock(str) {
 
 	var tokens = tokenize(str);
 
-	var noun = shiftNoun(tokens.slice(0));
+	var expr = shiftExpression(tokens.slice(0));
 
-	if (noun.length != tokens.length) 
-		throw Error("Invalid expression: " + nounToString(tokens));
+	if (expr.length != tokens.length) 
+		throw Error("Invalid expression: " + expressionToString(tokens));
 
-	return nounToString(reduceNoun(noun));
+	return expressionToString(reduceExpression(expr));
 
 }
 
-function reduceNoun(noun) {
+function reduceExpression(expr) {
 	var done = false;
 
 	while (!done) {
-		showDebug("Reducing " + nounToString(noun));
-
-		if (!validateNoun(noun)) {
-			showDebug("Can't validate this: " + noun);
-			throw Error("Invalid expression: " +nounToString(noun));
+		showDebug("Reducing " + expressionToString(expr));
+		
+		if (!validateExpression(expr)) {
+			showDebug("Can't validate this: " + expr);
+			throw Error("Invalid expression: " + expressionToString(expr));
 		}
 
 		// See if there are any sub-operations that need to be dealt with
-		var opIndex = indexOfNextOperator(noun, 1);
+		var opIndex = indexOfNextOperator(expr, 1);
 
 		if (opIndex != -1) {
-			var left = noun.slice(0, opIndex);
-			var right = noun.slice(opIndex);
-			var subNoun = shiftNoun(right);
+			var left = expr.slice(0, opIndex);
+			var right = expr.slice(opIndex);
+			var subNoun = shiftExpression(right);
 
 			increaseIndent();
 
-			var newSubNoun = reduceNoun(subNoun);
+			var newSubNoun = reduceExpression(subNoun);
 
-			if (nounsAreTheSame(newSubNoun, subNoun)) {
+			if (expressionsAreTheSame(newSubNoun, subNoun)) {
 				showDebug("CRASH!");
-				noun.unshift(op);
+				expr.unshift(op);
 				done = true;
 			}
 			else {
-				showDebug(nounToString(newSubNoun));
+				showDebug(expressionToString(newSubNoun));
 			}
 
 			decreaseIndent();
 
-			noun = left.concat(newSubNoun, right);
+			expr = left.concat(newSubNoun, right);
 			continue;
 		}
+		 
+		var newExpr = addBrackets(expr);
 
-		var newNoun = addBrackets(noun);
 
-
-		if (!nounsAreTheSame(noun, newNoun)) {
+		if (!expressionsAreTheSame(expr, newExpr)) {
 			showDebug("6  ::    [a b c]          [a [b c]]");
-			showDebug(nounToString(newNoun));
-			noun = newNoun;
+			showDebug(expressionToString(newExpr));
+			expr = newExpr;
 			continue;
 		}
 
-		var op = noun[0];
+		var op = expr[0];
 
 		if (!isOperator(op)) 
-			return noun;
+			return expr;
 		else
-			noun.shift();
+			expr.shift();
 
 		if (op == "?") {
-			newNoun = wut(noun);
+			newExpr = wut(expr);
 		}
 		else if (op == "+") {
-			newNoun = lus(noun);
+			newExpr = lus(expr);
 		}
 		else if (op == "=") {
-			newNoun = tis(noun);
+			newExpr = tis(expr);
 		}
 		else if (op == "/") {
-			newNoun = fas(noun);
+			newExpr = fas(expr);
 		}
 		else if (op == "*") {
-			newNoun = tar(noun);
+			newExpr = tar(expr);
 		}
 
-		if (nounsAreTheSame(noun, newNoun)) {
+		if (expressionsAreTheSame(expr, newExpr)) {
 			showDebug("CRASH!");
-			noun.unshift(op);
+			expr.unshift(op);
 			done = true;
 		}
 		else {
-			noun = newNoun;
-			if (indexOfNextOperator(noun) == -1) {
+			expr = newExpr;
+			if (indexOfNextOperator(expr) == -1) {
 				done = true;
 			}
 		}
 
-		showDebug(nounToString(noun));
+		showDebug(expressionToString(expr));
 
 	}
 
 	showDebug("===");
 
-	return noun;
+	return expr;
 }
 
 // Exports for node.js
