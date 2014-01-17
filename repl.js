@@ -16,11 +16,11 @@ function evalNock(command) {
 
 	var result = jsFunction();
 	console.log(nock.formatList(result));
-}
+
 
 'use strict';
 
-setDebugging(false);
+//setDebugging(false);
 
 console.log("Nock ver. " + nock.NOCK_VERSION + 
 			"; Nock.js ver. " + nock.NOCKJS_VERSION);
