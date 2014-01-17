@@ -546,8 +546,11 @@ function shiftNoun(expr) {
 	}
 }
 
-function indexOfNextOperator(noun) {
-	for (var i = 1; i < noun.length; i++) {
+function indexOfNextOperator(noun, startingAt) {
+
+	startingAt = (typeof startingAt !== 'undefined') ? startingAt : 0;
+
+	for (var i = startingAt; i < noun.length; i++) {
 		if (isOperator(noun[i])) 
 			return i;
 	}
@@ -666,7 +669,7 @@ function reduceNoun(noun) {
 		}
 
 		// See if there are any sub-operations that need to be dealt with
-		var opIndex = indexOfNextOperator(noun);
+		var opIndex = indexOfNextOperator(noun, 1);
 
 		if (opIndex != -1) {
 			var left = noun.slice(0, opIndex);
@@ -732,13 +735,12 @@ function reduceNoun(noun) {
 		}
 		else {
 			noun = newNoun;
-			if (!isOperator(noun[0])) 
+			if (indexOfNextOperator(noun) == -1) {
 				done = true;
+			}
 		}
 
 		showDebug(nounToString(noun));
-
-		//done = true;
 
 	}
 

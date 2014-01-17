@@ -10,12 +10,7 @@ function evalNock(command) {
 	console.log(nock.evalNock(command));
 
 	return;
-
-
-	var jsFunction = nock.parseNock(command);
-
-	var result = jsFunction();
-	console.log(nock.formatList(result));
+}
 
 
 'use strict';
