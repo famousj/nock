@@ -9,6 +9,13 @@ NOCKJS_VERSION = "0.2";
 
 DEBUG = 1;
 
+/* The largest integer that can be represented with JavaScript's Number type.
+ * This is based on Ecma-262 Edition 5.1, The ECMAScript Language
+ * Specification:
+ * http://www.ecma-international.org/ecma-262/5.1/#sec-8.5
+ */
+MAX_INT = Math.pow(2, 53);
+
 var indent = 0;
 
 function showDebug(msg) {
@@ -95,7 +102,11 @@ function lus(noun) {
 		showDebug("11 ::    +a               1 + a");
 		var atom = Array.isArray(noun) ? noun[0] : noun;
 		showDebug("1 + " + atom);
-		return 1 + parseInt(atom);
+		var atomInt = parseInt(atom);
+		if (atomInt >= MAX_INT) {
+			throw Error("Integer too large for JavaScript; cannot increment it");
+		}
+		return 1 + atomInt;
 	}
 }
 
