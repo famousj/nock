@@ -2,10 +2,9 @@
 Nock!
 =====
 
-If you don't know what Nock is, go `here`_.  Request a destroyer, run :chat,
-and then say hello.
+If you don't know what Nock is, go `urbit.org`_.  Request a destroyer, run :chat, and then say hello.
 
-.. _here: http://www.urbit.org/2013/11/18/urbit-is-easy-ch1.html
+.. _urbit.org: http://www.urbit.org/2013/11/18/urbit-is-easy-ch1.html
 
 This is an implementation of Nock in JavaScript.  This implementation is for pedagogic purposes, i.e. to let people play around with Nock and see how it works.  It's not intended to power a browser-based Arvo implementation, although if someone wants to take this and make that happen, that would be pretty awesome.
 
