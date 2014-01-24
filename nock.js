@@ -37,6 +37,34 @@ function decreaseIndent() {
 		indent--;
 }
 
+
+QUICK_BRACKETS_REGEX = "^QB\\=(.+)$";
+function isQuickBracketsCommand(string) {
+	return string.match(QUICK_BRACKETS_REGEX);
+}
+
+function getQuickBracketsValue(string) {
+	if ((match = string.match(QUICK_BRACKETS_REGEX)) != null) {
+		if (match[1].toLowerCase() == "true")
+			return true;
+		else if (match[1].toLowerCase() == "false")
+			return false;
+	}
+	throw Error("Invalid value for quick brackets!");
+
+}
+
+function setQuickBrackets(qbValue) {
+	if (qbValue) {
+		showDebug("Quick brackets are now ON");
+		QUICK_BRACKETS = 1;
+	}
+	else {
+		showDebug("Quick brackets are now OFF");
+		QUICK_BRACKETS = 0;
+	}
+}
+
 var YES = 0;
 var NO  = 1;
 
@@ -659,6 +687,11 @@ function evalNock(str) {
 	 * detect a crash or get a value.
 	 */
 	
+	if (isQuickBracketsCommand(str)) {
+		setQuickBrackets(getQuickBracketsValue(str));
+		return "";
+	}
+	
 	if (DEBUG > 1) console.log("Evaluating: '" + str + "'");
 
 	var operatorRegex = "^" + operators;
@@ -797,5 +830,5 @@ exports.setDebugging = function(debugging) {
 }
 
 exports.setQuickBrackets = function(quickBrackets) {
-	QUICK_BRACKETS = quickBrackets;
+	setQuickBrackets(quickBrackets);
 }
