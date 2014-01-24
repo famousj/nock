@@ -8,6 +8,7 @@ NOCK_VERSION = "5K";
 NOCKJS_VERSION = "0.2";
 
 DEBUG = 1;
+QUICK_BRACKETS = 1;
 
 /* The largest integer that can be represented with JavaScript's Number type.
  * This is based on Ecma-262 Edition 5.1, The ECMAScript Language
@@ -263,9 +264,6 @@ function tar(noun) {
 		var c = shiftExpression(operands);
 
 		showDebug("27 ::    *[a 2 b c]       *[*[a b] *[a c]]");
-		showDebug("a: " + expressionToString(subject));
-		showDebug("b: " + expressionToString(b));
-		showDebug("c: " + expressionToString(c));
 		return [].concat("*", "[", "*", "[", subject, b, "]",
 								   "*", "[", subject, c, "]", "]");
 	}
@@ -481,7 +479,7 @@ function popExpression(expr) {
 
 		noun.push(token);
 
-		if (isOperator(expr[expr.length-1])) {
+		while (isOperator(expr[expr.length-1])) {
 			noun.unshift(expr.pop());
 		}
 
@@ -502,14 +500,11 @@ function shiftExpression(expr) {
 
 	var noun = [];
 
-	var token = expr.shift();
-
-	var op;
-	if (isOperator(token)) {
-		op = token;
-		token = expr.shift();
+	var ops = [];
+	for (var token = expr.shift(); isOperator(token); token = expr.shift()) {
+		ops.push(token);
 	}
-	
+
 	if (token == "[") {
 		while (expr[0] != "]") {
 			var newExpr = shiftExpression(expr);
@@ -528,15 +523,15 @@ function shiftExpression(expr) {
 
 		noun.unshift(token);
 
-		if (op) {
-			noun.unshift(op);
+		if (ops.length) {
+			noun = ops.concat(noun);
 		}
 
 		return noun;
 	}	
 	else {
-		if (op) 
-			return [op, token];
+		if (ops.length) 
+			return ops.concat(token);
 		else 
 			return token;
 	}
@@ -622,10 +617,40 @@ function addBrackets(expr) {
 		return expr;
 	}
 
-	showDebug("b: " + expressionToString(b));
-	showDebug("c: " + expressionToString(c));
-
 	return newExpr.concat("[", b, c, "]", ser);
+}
+
+function quickAddBrackets(expr) {
+	/*
+	 6  ::    [a b c]          [a [b c]]
+	 Take an array of tokens.  Add brackets iteratively and recursively until 
+	 they're all balanced.
+	 */
+	
+	if (!Array.isArray(expr) || expr.length <= 2)
+		return expr;
+
+	var newExpr = expr.slice(0);
+
+	// The last character should be "]"
+	var ser = newExpr.pop();
+
+	var c = quickAddBrackets(popExpression(newExpr));
+
+	// Don't allow a cell with one item
+	if (newExpr[newExpr.length-1] == "[") 
+		throw Error("Can't add brackets to expression: " + 
+						expressionToString(expr));
+
+	var b = quickAddBrackets(popExpression(newExpr));
+
+	// Until we come across an atom and not a sel...
+	while (newExpr[newExpr.length-1] != "[") {
+		c = [].concat("[", b, c, "]");
+		b = quickAddBrackets(popExpression(newExpr));
+	}
+
+	return newExpr.concat( b, c, ser);
 }
 
 function evalNock(str) {
@@ -679,7 +704,8 @@ function reduceExpression(expr) {
 
 			if (expressionsAreTheSame(newSubNoun, subNoun)) {
 				showDebug("CRASH!");
-				expr.unshift(op);
+				//expr.unshift(op);
+				expr = ["CRASH"];
 				done = true;
 			}
 			else {
@@ -692,14 +718,24 @@ function reduceExpression(expr) {
 			continue;
 		}
 		 
-		var newExpr = addBrackets(expr);
+		var newExpr;
+		if (QUICK_BRACKETS) {
+			var newExpr = quickAddBrackets(expr);
+			if (!expressionsAreTheSame(expr, newExpr)) {
+				showDebug("6  ::    [a b c]          [a [b c]]");
+				showDebug(expressionToString(newExpr));
+				expr = newExpr;
+			}
+		}
+		else {
+			var newExpr = addBrackets(expr);
 
-
-		if (!expressionsAreTheSame(expr, newExpr)) {
-			showDebug("6  ::    [a b c]          [a [b c]]");
-			showDebug(expressionToString(newExpr));
-			expr = newExpr;
-			continue;
+			if (!expressionsAreTheSame(expr, newExpr)) {
+				showDebug("6  ::    [a b c]          [a [b c]]");
+				showDebug(expressionToString(newExpr));
+				expr = newExpr;
+				continue;
+			}
 		}
 
 		var op = expr[0];
@@ -727,7 +763,8 @@ function reduceExpression(expr) {
 
 		if (expressionsAreTheSame(expr, newExpr)) {
 			showDebug("CRASH!");
-			expr.unshift(op);
+			//expr.unshift(op);
+			expr = ["CRASH"];
 			done = true;
 		}
 		else {
@@ -758,5 +795,7 @@ exports.evalNock = function(command) {
 exports.setDebugging = function(debugging) {
 	DEBUG = debugging;
 }
-	
-	
+
+exports.setQuickBrackets = function(quickBrackets) {
+	QUICK_BRACKETS = quickBrackets;
+}
