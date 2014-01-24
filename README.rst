@@ -25,6 +25,11 @@ following along.
 
 .. _Urbit documentation: http://www.urbit.org/2013/11/18/urbit-is-easy-ch2.html
 
+The one option that can be set is "Quick Brackets", so that brackets get added
+all at once, instead of getting added one at a time.  This is the
+default behavior.  If you want to disable this and see brackets being added
+iteratively, enter `QB=false`.  Then enter `QB=true` to turn it back on.
+
 ====
 Notes
 ====
