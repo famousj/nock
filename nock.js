@@ -65,7 +65,7 @@ function setQuickBrackets(qbValue) {
 	}
 }
 
-STRICT = 0;
+STRICT = 1;
 STRICT_REGEX = "^STRICT=(.*)$";
 function isStrictCommand(string) {
 	return string.match(STRICT_REGEX);
