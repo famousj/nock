@@ -52,26 +52,23 @@ a bit.  Disable strict mode by entering "strict=off" at the command prompt.
 
 .. _Nock spec: http://www.cafepress.com/cp/customize/product2.aspx?from=CustomDesigner&number=1230382214
 
-Here are the pre-reduced versions of the commands, for your reference:
+Here are the pre-reduced versions of the commands, for your reference.  Most of these are described in detail
+in `Chapter 3`_ of the documentation:
+
+.. _Chapter 3: http://www.urbit.org/doc/2013/11/18/ch3/
 
     Nock 6:
-    
     32r ::   *[a 6 b c d]               *[a *[[c d] [0 *[[2 3] [0 ++*[a b]]]]]]
     
     Nock 7:
-    
     33r ::  *[a 7 b c]                      *[*[a b]  c]
     
     Nock 8:
-    
     34r :: *[a 8 b c] *[[*[a b] a] c]
     
     Nock 9:
-    
     35r :: *[a 9 b c] *[*[a c] *[*[a c] 0 b]]
     
     Nock 10:
-    
     36r ::    *[a 10 [b c] d]   *[*[[*[a c] a] 0 3] d]
-    
     37r ::    *[a 10 b c]       *[a c]
