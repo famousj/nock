@@ -65,6 +65,37 @@ function setQuickBrackets(qbValue) {
 	}
 }
 
+STRICT = 0;
+STRICT_REGEX = "^STRICT=(.*)$";
+function isStrictCommand(string) {
+	return string.match(STRICT_REGEX);
+}
+
+function getStrictValue(string) {
+	if ((match = string.match(STRICT_REGEX)) != null) {
+		if (match[1].toLowerCase() == "true" || 
+			match[1].toLowerCase() == "yes"  ||
+			match[1].toLowerCase() == "on" )
+			return true;
+		else if (match[1].toLowerCase() == "false" ||
+				 match[1].toLowerCase() == "no"    || 
+				 match[1].toLowerCase() == "off")
+			return false;
+	}
+	throw Error("Invalid value for setting strict");
+}
+
+function setStrict(strictValue) {
+	if (strictValue) {
+		showDebug("Strict is now ON");
+		STRICT = 1;
+	}
+	else {
+		showDebug("Strict is now OFF");
+		STRICT = 0;
+	}
+}
+
 var YES = 0;
 var NO  = 1;
 
@@ -691,6 +722,11 @@ function evalNock(str) {
 		setQuickBrackets(getQuickBracketsValue(str));
 		return "";
 	}
+
+	if (isStrictCommand(str)) {
+		setStrict(getStrictValue(str));
+		return "";
+	}
 	
 	if (DEBUG > 1) console.log("Evaluating: '" + str + "'");
 
@@ -831,4 +867,8 @@ exports.setDebugging = function(debugging) {
 
 exports.setQuickBrackets = function(quickBrackets) {
 	setQuickBrackets(quickBrackets);
+}
+
+exports.setStrict = function(strict) {
+	setStrict(strict);
 }
