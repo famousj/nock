@@ -45,9 +45,13 @@ function isQuickBracketsCommand(string) {
 
 function getQuickBracketsValue(string) {
 	if ((match = string.match(QUICK_BRACKETS_REGEX)) != null) {
-		if (match[1].toLowerCase() == "true")
+		if (match[1].toLowerCase() == "true" || 
+			match[1].toLowerCase() == "yes"  ||
+			match[1].toLowerCase() == "on" )
 			return true;
-		else if (match[1].toLowerCase() == "false")
+		else if (match[1].toLowerCase() == "false" ||
+				 match[1].toLowerCase() == "no"    || 
+				 match[1].toLowerCase() == "off")
 			return false;
 	}
 	throw Error("Invalid value for quick brackets!");
