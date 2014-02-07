@@ -1,14 +1,14 @@
+
 /*
  * For details as to what's going on here, check out Chapter 2 of the Urbit
  * documentation:
- * http://www.urbit.org/2013/11/18/urbit-is-easy-ch2.html
+ * http://www.urbit.org/
  */
 
 NOCK_VERSION = "5K";
-NOCKJS_VERSION = "0.2";
+NOCKJS_VERSION = "0.3";
 
 DEBUG = 1;
-QUICK_BRACKETS = 1;
 
 /* The largest integer that can be represented with JavaScript's Number type.
  * This is based on Ecma-262 Edition 5.1, The ECMAScript Language
@@ -38,6 +38,7 @@ function decreaseIndent() {
 }
 
 
+QUICK_BRACKETS = 1;
 QUICK_BRACKETS_REGEX = "^QB\\=(.+)$";
 function isQuickBracketsCommand(string) {
 	return string.match(QUICK_BRACKETS_REGEX);
@@ -45,9 +46,13 @@ function isQuickBracketsCommand(string) {
 
 function getQuickBracketsValue(string) {
 	if ((match = string.match(QUICK_BRACKETS_REGEX)) != null) {
-		if (match[1].toLowerCase() == "true")
+		if (match[1].toLowerCase() == "true" || 
+			match[1].toLowerCase() == "yes"  ||
+			match[1].toLowerCase() == "on" )
 			return true;
-		else if (match[1].toLowerCase() == "false")
+		else if (match[1].toLowerCase() == "false" ||
+				 match[1].toLowerCase() == "no"    || 
+				 match[1].toLowerCase() == "off")
 			return false;
 	}
 	throw Error("Invalid value for quick brackets!");
@@ -62,6 +67,38 @@ function setQuickBrackets(qbValue) {
 	else {
 		showDebug("Quick brackets are now OFF");
 		QUICK_BRACKETS = 0;
+	}
+}
+
+//STRICT = 1;
+STRICT = 0;
+STRICT_REGEX = "^strict=(.*)$";
+function isStrictCommand(string) {
+	return string.toLowerCase().match(STRICT_REGEX);
+}
+
+function getStrictValue(string) {
+	if ((match = string.toLowerCase().match(STRICT_REGEX)) != null) {
+		if (match[1].toLowerCase() == "true" || 
+			match[1].toLowerCase() == "yes"  ||
+			match[1].toLowerCase() == "on" )
+			return true;
+		else if (match[1].toLowerCase() == "false" ||
+				 match[1].toLowerCase() == "no"    || 
+				 match[1].toLowerCase() == "off")
+			return false;
+	}
+	throw Error("Invalid value for setting strict");
+}
+
+function setStrict(strictValue) {
+	if (strictValue) {
+		showDebug("Strict is now ON");
+		STRICT = 1;
+	}
+	else {
+		showDebug("Strict is now OFF");
+		STRICT = 0;
 	}
 }
 
@@ -170,7 +207,7 @@ function fas(noun) {
 	20 ::    /[(a + a + 1) b] /[3 /[a b]]
 	21 ::    /a               /a
 	*/
-	
+
 	if (isAtom(noun)) { 
 		showDebug("21 ::    /a               /a");
 		return noun;
@@ -191,6 +228,11 @@ function fas(noun) {
 	if (axis == 1) {
 		showDebug("16 ::    /[1 a]           a");
 		return tree;
+	}
+
+	if (wut(tree, false) == NO) {
+		showDebug("21 ::    /a               /a");
+		return noun;
 	}
 
 	var newTree = tree.slice(1);
@@ -265,19 +307,40 @@ function tar(noun) {
 	var operands = formula;
 
 	if (wut(operator, false) == YES) {
+		// Remove sel and ser from the front and back, respectively
+		sel = operator.shift();
+		b = shiftExpression(operator);
+		c = shiftExpression(operator);
+		d = operands;
+
 		showDebug("23 ::    *[a [b c] d]     [*[a b c] *[a d]]");
-		return [].concat("[", "*", "[", subject, operator, "]", 
-						      "*", "[", subject, operands, "]", "]");
+		showDebug("a: " + expressionToString(subject));
+		showDebug("b: " + expressionToString(b));
+		showDebug("c: " + expressionToString(c));
+		showDebug("d: " + expressionToString(d));
+
+		if (STRICT) {
+			return [].concat("[", "*", "[", subject, b, c, "]", 
+						      "*", "[", subject, d, "]", "]");
+		}
+		else {
+			return [].concat("[", "*", "[", subject, "[", b, c, "]", 
+							 "]", "*", "[", subject, d, "]", "]");
+		}
 	}
 
 	// FAS
 	if (operator == 0) {
 		showDebug("25 ::    *[a 0 b]         /[b a]");
+		showDebug("a: " + expressionToString(subject));
+		showDebug("b: " + expressionToString(operands));
 		return [].concat("/", "[", operands, subject, "]");
 	}
 	// Ignore the subject
 	else if (operator == 1) {
 		showDebug("26 ::    *[a 1 b]         b");
+		showDebug("a: " + expressionToString(subject));
+		showDebug("b: " + expressionToString(operands));
 		return operands;
 	}
 	// Generate a new subject
@@ -292,22 +355,31 @@ function tar(noun) {
 		var c = shiftExpression(operands);
 
 		showDebug("27 ::    *[a 2 b c]       *[*[a b] *[a c]]");
+		showDebug("a: " + expressionToString(subject));
+		showDebug("b: " + expressionToString(b));
+		showDebug("c: " + expressionToString(c));
 		return [].concat("*", "[", "*", "[", subject, b, "]",
 								   "*", "[", subject, c, "]", "]");
 	}
 	// WUT
 	else if (operator == 3) { 
 		showDebug("28 ::    *[a 3 b]         ?*[a b]");
+		showDebug("a: " + expressionToString(subject));
+		showDebug("b: " + expressionToString(operands));
 		return [].concat("?", "*", "[", subject, operands, "]");
 	}
 	// LUS
 	else if (operator == 4) {
 		showDebug("29 ::    *[a 4 b]         +*[a b]");
+		showDebug("a: " + expressionToString(subject));
+		showDebug("b: " + expressionToString(operands));
 		return [].concat("+", "*", "[", subject, operands, "]");
 	}
 	// TIS
 	else if (operator == 5) {
 		showDebug("30 ::    *[a 5 b]         =*[a b]");
+		showDebug("a: " + expressionToString(subject));
+		showDebug("b: " + expressionToString(operands));
 		return [].concat("=", "*", "[", subject, operands, "]");
 	}
 	// if-then-else
@@ -327,17 +399,36 @@ function tar(noun) {
 		sel = operands.shift();
 		var c = shiftExpression(operands);
 		var d = shiftExpression(operands);
-		showDebug(
+		if (STRICT) {
+			showDebug(
 "32 ::    *[a 6 b c d]     *[a 2 [0 1] 2 [1 c d] [1 0] 2 [1 2 3] [1 0] 4 4 b]");
 
-		return [].concat("*", "[", subject, 2, "[", 0, 1, "]", 2, 
-							  "[", 1, c, d, "]",
-							  "[", 1, 0, "]", 2, 
-							  "[", 1, 2, 3, "]",
-							  "[", 1, 0, "]", 4, 4, b, "]");
-							  
+			showDebug("a: " + expressionToString(subject));
+			showDebug("b: " + expressionToString(b));
+			showDebug("c: " + expressionToString(c));
+			showDebug("d: " + expressionToString(d));
+			return [].concat("*", "[", subject, 2, "[", 0, 1, "]", 2, 
+								  "[", 1, c, d, "]",
+								  "[", 1, 0, "]", 2, 
+								  "[", 1, 2, 3, "]",
+								  "[", 1, 0, "]", 4, 4, b, "]");
+		} 
+		else {
+			showDebug(
+"32r ::   *[a 6 b c d]               *[a *[[c d] [0 *[[2 3] [0 ++*[a b]]]]]]");
+
+			showDebug("a: " + expressionToString(subject));
+			showDebug("b: " + expressionToString(b));
+			showDebug("c: " + expressionToString(c));
+			showDebug("d: " + expressionToString(d));
+			return [].concat("*", "[", subject, "*", "[", "[", c,  d, "]",
+							      "[", 0, "*", "[", "[", 2, 3, "]",
+								  "[", 0, "+", "+", "*", "[", subject, b,
+								  "]", "]", "]", "]", "]", "]");
+		}
 	}
 	else if (operator == 7) {
+
 		if (wut(operands, false) == NO) {
 			showDebug("39 ::    *a               *a");
 			return noun;
@@ -347,8 +438,20 @@ function tar(noun) {
 		var b = shiftExpression(operands);
 		var c = shiftExpression(operands);
 
-		showDebug("33 ::    *[a 7 b c]       *[a 2 b 1 c]");
-		return [].concat("*", "[", subject, 2, b, 1, c, "]");
+		if (STRICT) {
+			showDebug("33 ::    *[a 7 b c]       *[a 2 b 1 c]");
+			showDebug("a: " + expressionToString(subject));
+			showDebug("b: " + expressionToString(b));
+			showDebug("c: " + expressionToString(c));
+			return [].concat("*", "[", subject, 2, b, 1, c, "]");
+		}
+		else {
+			showDebug("33r ::     *[a 7 b c]      *[*[a b]  c]");
+			showDebug("a: " + expressionToString(subject));
+			showDebug("b: " + expressionToString(b));
+			showDebug("c: " + expressionToString(c));
+			return [].concat("*", "[", "*", "[", subject, b, "]", c, "]");
+		}
 	}
 	else if (operator == 8) {
 		if (wut(operands, false) == NO) {
@@ -357,12 +460,27 @@ function tar(noun) {
 		}
 
 		sel = operands.shift();
+		ser = operands.pop();
 		var b = shiftExpression(operands);
-		var c = shiftExpression(operands);
+		var c = operands;
 
-		showDebug("34 ::    *[a 8 b c]       *[a 7 [[7 [0 1] b] 0 1] c]");
-		return [].concat("*", "[", subject, 7, "[", "[", 7, "[", 0, 1, "]",
-						 b, "]", 0, 1, "]", c, "]");
+		if (STRICT) {
+			showDebug("34 ::    *[a 8 b c]       *[a 7 [[7 [0 1] b] 0 1] c]");
+			showDebug("a: " + expressionToString(subject));
+			showDebug("b: " + expressionToString(b));
+			showDebug("c: " + expressionToString(c));
+			return [].concat("*", "[", subject, 7, "[", "[", 7, "[", 0, 1, "]",
+			 				 b, "]", 0, 1, "]", c, "]");
+		}
+		else {
+			showDebug("34r ::    *[a 8 b c]       *[[*[a b] a] c]");
+			showDebug("a: " + expressionToString(subject));
+			showDebug("b: " + expressionToString(b));
+			showDebug("c: " + expressionToString(c));
+
+			return [].concat("*", "[", "[", "*", "[", subject, b, "]",  
+							subject, "]", c, "]");
+		}
 	}
 	else if (operator == 9) {
 		if (wut(operands, false) == NO) {
@@ -374,8 +492,23 @@ function tar(noun) {
 		var b = shiftExpression(operands);
 		var c = shiftExpression(operands);
 
-		showDebug("35 ::    *[a 9 b c]       *[a 7 c 2 [0 1] 0 b]");
-		return [].concat("*", "[", subject, 7, c, 2, "[", 0, 1, "]", 0, b, "]");
+		if (STRICT) {
+			showDebug("35 ::    *[a 9 b c]       *[a 7 c 2 [0 1] 0 b]");
+			showDebug("a: " + expressionToString(subject));
+			showDebug("b: " + expressionToString(b));
+			showDebug("c: " + expressionToString(c));
+			return [].concat("*", "[", subject, 7, c, 2, "[", 0, 1, "]", 
+							 0, b, "]");
+		}
+		else {
+			showDebug("35r ::    *[a 9 b c]       *[*[a c] *[*[a c] 0 b]]");
+			showDebug("a: " + expressionToString(subject));
+			showDebug("b: " + expressionToString(b));
+			showDebug("c: " + expressionToString(c));
+			return [].concat("*", "[", "*", "[", subject, c, "]", 
+							 "*", "[", "*", "[", subject, c, "]", 0, b, 
+							 "]", "]");
+		}
 	}
 	else if (operator == 10) {
 		if (wut(operands, false) == NO) {
@@ -392,6 +525,9 @@ function tar(noun) {
 			var c = operands;
 
 			showDebug("37 ::    *[a 10 b c]      *[a c]");
+			showDebug("a: " + expressionToString(subject));
+			showDebug("b: " + expressionToString(b));
+			showDebug("c: " + expressionToString(c));
 			return [].concat("*", "[", subject, c, "]");
 		}
 
@@ -402,8 +538,24 @@ function tar(noun) {
 		var d = shiftExpression(operands);
 
 
-		showDebug("36 ::    *[a 10 [b c] d]  *[a 8 c 7 [0 3] d]");
-		return [].concat('*', '[', subject, 8, c, 7, '[', 0, 3, ']', d, ']');
+		if (STRICT) {
+			showDebug("36 ::    *[a 10 [b c] d]  *[a 8 c 7 [0 3] d]");
+			showDebug("a: " + expressionToString(subject));
+			showDebug("b: " + expressionToString(b));
+			showDebug("c: " + expressionToString(c));
+			showDebug("d: " + expressionToString(d));
+			return [].concat('*', '[', subject, 8, c, 7, 
+							 '[', 0, 3, ']', d, ']');
+		}
+		else {
+			showDebug("36r ::    *[a 10 [b c] d]   *[*[[*[a c] a] 0 3] d]");
+			showDebug("a: " + expressionToString(subject));
+			showDebug("b: " + expressionToString(b));
+			showDebug("c: " + expressionToString(c));
+			showDebug("d: " + expressionToString(d));
+			return [].concat("*", "[", "*", "[", "[", "*", "[", subject, c, "]",
+							 subject, "]", 0, 3, "]", d, "]");
+		}
 	}
 
 	// If we get all the way down here, nothing applied, the operator is
@@ -691,6 +843,11 @@ function evalNock(str) {
 		setQuickBrackets(getQuickBracketsValue(str));
 		return "";
 	}
+
+	if (isStrictCommand(str)) {
+		setStrict(getStrictValue(str));
+		return "";
+	}
 	
 	if (DEBUG > 1) console.log("Evaluating: '" + str + "'");
 
@@ -735,9 +892,14 @@ function reduceExpression(expr) {
 
 			var newSubNoun = reduceExpression(subNoun);
 
+			if (newSubNoun == "CRASH") {
+				return newSubNoun;
+			}
+
 			if (expressionsAreTheSame(newSubNoun, subNoun)) {
 				showDebug("CRASH!");
-				//expr.unshift(op);
+				return "CRASH";
+
 				expr = ["CRASH"];
 				done = true;
 			}
@@ -752,7 +914,7 @@ function reduceExpression(expr) {
 		}
 		 
 		var newExpr;
-		if (QUICK_BRACKETS) {
+		if (QUICK_BRACKETS || !STRICT) {
 			var newExpr = quickAddBrackets(expr);
 			if (!expressionsAreTheSame(expr, newExpr)) {
 				showDebug("6  ::    [a b c]          [a [b c]]");
@@ -796,9 +958,7 @@ function reduceExpression(expr) {
 
 		if (expressionsAreTheSame(expr, newExpr)) {
 			showDebug("CRASH!");
-			//expr.unshift(op);
-			expr = ["CRASH"];
-			done = true;
+			return "CRASH";
 		}
 		else {
 			expr = newExpr;
@@ -832,3 +992,8 @@ exports.setDebugging = function(debugging) {
 exports.setQuickBrackets = function(quickBrackets) {
 	setQuickBrackets(quickBrackets);
 }
+
+exports.setStrict = function(strict) {
+	setStrict(strict);
+}
+
