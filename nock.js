@@ -8,7 +8,6 @@ NOCK_VERSION = "5K";
 NOCKJS_VERSION = "0.2";
 
 DEBUG = 1;
-QUICK_BRACKETS = 1;
 
 /* The largest integer that can be represented with JavaScript's Number type.
  * This is based on Ecma-262 Edition 5.1, The ECMAScript Language
@@ -38,6 +37,7 @@ function decreaseIndent() {
 }
 
 
+QUICK_BRACKETS = 1;
 QUICK_BRACKETS_REGEX = "^QB\\=(.+)$";
 function isQuickBracketsCommand(string) {
 	return string.match(QUICK_BRACKETS_REGEX);
@@ -792,7 +792,7 @@ function reduceExpression(expr) {
 		}
 		 
 		var newExpr;
-		if (QUICK_BRACKETS) {
+		if (QUICK_BRACKETS || !STRICT) {
 			var newExpr = quickAddBrackets(expr);
 			if (!expressionsAreTheSame(expr, newExpr)) {
 				showDebug("6  ::    [a b c]          [a [b c]]");
