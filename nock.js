@@ -41,11 +41,11 @@ function decreaseIndent() {
 QUICK_BRACKETS = 1;
 QUICK_BRACKETS_REGEX = "^QB\\=(.+)$";
 function isQuickBracketsCommand(string) {
-	return string.match(QUICK_BRACKETS_REGEX);
+	return string.toLowerCase().match(QUICK_BRACKETS_REGEX);
 }
 
 function getQuickBracketsValue(string) {
-	if ((match = string.match(QUICK_BRACKETS_REGEX)) != null) {
+	if ((match = string.toLowerCase().match(QUICK_BRACKETS_REGEX)) != null) {
 		if (match[1].toLowerCase() == "true" || 
 			match[1].toLowerCase() == "yes"  ||
 			match[1].toLowerCase() == "on" )
@@ -70,8 +70,7 @@ function setQuickBrackets(qbValue) {
 	}
 }
 
-//STRICT = 1;
-STRICT = 0;
+STRICT = 1;
 STRICT_REGEX = "^strict=(.*)$";
 function isStrictCommand(string) {
 	return string.toLowerCase().match(STRICT_REGEX);
